@@ -3,9 +3,7 @@ from pcode.flow.communication import global_average
 
 
 def define_local_training_tracker():
-    return define_trackers([
-        'computing_time', 'global_time', 'data_time',
-        'sync_time', 'load_time', 'losses', 'top1', 'top5'])
+    return define_trackers(['losses', 'top1', 'top5'])
 
 
 def define_val_tracker():

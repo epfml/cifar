@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import gc
-import time
-from copy import deepcopy
 
 import torch
 import torch.distributed as dist
@@ -14,9 +12,8 @@ from pcode.tracking.checkpoint import save_to_checkpoint
 from pcode.flow.flow_utils import is_stop, get_current_epoch
 from pcode.flow.communication import aggregate_gradients
 from pcode.tracking.logging import info, \
-    logging_computing, logging_sync_time, \
-    logging_display_training, logging_display_val, logging_load_time, \
-    logging_globally, update_performancec_tracker
+    logging_display_training, logging_display_val, \
+    update_performance_tracker
 from pcode.tracking.meter import define_local_training_tracker,\
     define_val_tracker, evaluate_gloabl_performance
 
@@ -34,8 +31,6 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
 
     # init global variable.
     tracker = define_local_training_tracker()
-    start_global_time = time.time()
-    tracker['start_load_time'] = time.time()
     info('enter the training.')
 
     # break until finish expected full epoch training.
@@ -43,9 +38,6 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
         # configure local step.
         for _input, _target in train_loader:
             model.train()
-
-            # update local step.
-            logging_load_time(tracker)
 
             # update local index and get local step
             args.local_index += 1
@@ -62,18 +54,12 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
             loss, performance = inference(model, criterion, metrics, _input, _target)
             loss.backward()
 
-            # logging locally.
-            logging_computing(tracker, loss, performance, _input)
+            # update performance tracker
+            update_performance_tracker(tracker, loss, performance, _input.size(0))
 
             # sync and broadcast gradients to other nodes by using reduce_sum.
             aggregate_gradients(args, model)
-
-            # evaluate the sync time and apply the gradient.
-            logging_sync_time(tracker)
             optimizer.step()
-
-            # logging.
-            logging_globally(tracker, start_global_time)
 
             # finish one epoch training and to decide if we want to val our model.
             if args.epoch_ % 1 == 0:
@@ -89,10 +75,6 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
 
             # display the logging info.
             logging_display_training(args, tracker)
-
-            # reset load time for the tracker as well as the round starting time.
-            tracker['start_load_time'] = time.time()
-            start_global_time = time.time()
 
         # reshuffle the data.
         if args.reshuffle_per_epoch:
@@ -161,7 +143,7 @@ def validate(args, model, criterion, metrics, val_loader):
         with torch.no_grad():
             loss, performance = inference(
                 model, criterion, metrics, _input, _target)
-            tracker = update_performancec_tracker(
+            tracker = update_performance_tracker(
                 tracker, loss, performance, _input.size(0))
 
     info('Aggregate val accuracy from different partitions.')

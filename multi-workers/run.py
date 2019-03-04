@@ -31,19 +31,9 @@ def main(args):
 
 
 def run_cmd(args, cmd):
-    if args.use_db:
-        # define the extra database to record the metadata.
-        print('Init the mongo db.')
-        init_mongo(args)
-
     # run the cmd.
     print('\nRun the following cmd:\n' + cmd)
     os.system(cmd)
-
-    # announce the termination.
-    if args.use_db:
-        announce_job_termination_to_mongo(args)
-        print('Announce the completition of the job to the mongodb.')
 
 
 if __name__ == '__main__':

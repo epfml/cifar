@@ -6,7 +6,7 @@ from os.path import join, isfile
 
 import torch
 
-from pcode.utils.op_paths import build_dirs, remove_folder
+from pcode.utils.op_paths import build_dirs
 
 
 def get_checkpoint_folder_name(args):
@@ -53,10 +53,12 @@ def save_to_checkpoint(state, is_best, dirname, filename, save_all=False):
         shutil.copyfile(checkpoint_path, join(
             dirname,
             'checkpoint_epoch_%s.pth.tar' % state['current_epoch']))
-    elif str(state['current_epoch']) in args.save_some_models:
-        shutil.copyfile(checkpoint_path, join(
-            dirname,
-            'checkpoint_epoch_%s.pth.tar' % state['current_epoch']))
+    elif args.save_some_models is not None:
+        if str(state['current_epoch']) in args.save_some_models:
+            shutil.copyfile(checkpoint_path, join(
+                dirname,
+                'checkpoint_epoch_%s.pth.tar' % state['current_epoch'])
+            )
 
 
 def check_resume_status(args, old_args):

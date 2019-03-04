@@ -116,7 +116,7 @@ def get_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--checkpoint_index', type=str, default=None)
     parser.add_argument('--save_all_models', type=str2bool, default=False)
-    parser.add_argument('--save_some_models', type=str, default='60')
+    parser.add_argument('--save_some_models', type=str, default=None)
     parser.add_argument('--log_dir', default=LOG_DIRECTORY)
     parser.add_argument('--plot_dir', default=None,
                         type=str, help='path to plot the result')

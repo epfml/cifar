@@ -74,38 +74,10 @@ def log_args(args):
         info('{}: {}'.format(name, getattr(args.graph, name)))
 
 
-def logging_computing(tracker, loss, performance, _input):
-    # measure accuracy and record loss.
-    tracker = update_performancec_tracker(tracker, loss, performance, _input.size(0))
-
-    # measure elapsed time.
-    tracker['computing_time'].update(time.time() - tracker['end_data_time'])
-    tracker['start_sync_time'] = time.time()
-
-
-def logging_sync_time(tracker):
-    # measure elapsed time.
-    tracker['sync_time'].update(time.time() - tracker['start_sync_time'])
-
-
-def logging_load_time(tracker):
-    # measure elapsed time.
-    tracker['load_time'].update(time.time() - tracker['start_load_time'])
-
-
-def logging_globally(tracker, start_global_time):
-    tracker['global_time'].update(time.time() - start_global_time)
-
-
 def logging_display_training(args, tracker):
-    log_info = 'Epoch: {epoch:.3f}. Local index: {local_index}. Load: {load:.3f}s | Data: {data:.3f}s | Computing: {computing_time:.3f}s | Sync: {sync_time:.3f}s | Global: {global_time:.3f}s | Loss: {loss:.4f} | top1: {top1:.4f} | top5: {top5:.4f}'.format(
+    log_info = 'Epoch: {epoch:.3f}. Local index: {local_index}. Loss: {loss:.4f} | top1: {top1:.4f} | top5: {top5:.4f}'.format(
         epoch=args.epoch_,
         local_index=args.local_index,
-        load=tracker['load_time'].avg,
-        data=tracker['data_time'].avg,
-        computing_time=tracker['computing_time'].avg,
-        sync_time=tracker['sync_time'].avg,
-        global_time=tracker['global_time'].avg,
         loss=tracker['losses'].avg,
         top1=tracker['top1'].avg,
         top5=tracker['top5'].avg)
@@ -120,7 +92,7 @@ def logging_display_val(args):
         args.epoch_, args.best_prec1))
 
 
-def update_performancec_tracker(tracker, loss, performance, size):
+def update_performance_tracker(tracker, loss, performance, size):
     tracker['losses'].update(loss.item(), size)
 
     if len(performance) == 2:

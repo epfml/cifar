@@ -40,8 +40,3 @@ def global_average(sum, count):
             return all_sum / all_count
     avg = helper([sum, count])
     return avg
-
-
-def elementwise_min(tensor):
-    dist.all_reduce(tensor, op=dist.ReduceOp.MIN)
-    return tensor
