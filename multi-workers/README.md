@@ -33,4 +33,4 @@ The detailed explanation of some arguments:
 * The `lr` and `base_batch_size` determine the learning rate per sample, while the eventual learning rate used for training will be determined by `batch_size`, `lr_scaleup` and the summation of `blocks` (i.e., the number of workers).
 * The `lr_warmup` determines if we want to warmup the learning rate or not. If `lr_warmup is True` then the learning rate would gradually increase from `0.1` to the scaled one. Otherwise, it will directly use the scaled one as the initial learning rate.
 * The `lr_schedule_scheme` and `lr_change_epochs` define the learning rate schedule, wherein our example is the constant learning rate with a decay factor (i.e., argument `lr_decay`) at predefined epochs.
-* The `momentum` decides the momentum scheme used for the distributed training. In this example, we are using Nesterov local momentum with factor `0.9`.
+* The `momentum` decides the momentum scheme used for the distributed training. In this example, we are using Nesterov momentum with factor `0.9`.
