@@ -6,16 +6,15 @@ import torch.distributed as dist
 
 from pcode.components.create_metrics import accuracy
 from pcode.components.create_scheduler import adjust_learning_rate
-from pcode.components.create_dataset import define_dataset, load_data_batch, \
-    _load_data_batch
+from pcode.components.create_dataset import \
+    define_dataset, load_data_batch, _load_data_batch
 from pcode.tracking.checkpoint import save_to_checkpoint
 from pcode.flow.flow_utils import is_stop, get_current_epoch
-from pcode.flow.communication import aggregate_gradients
-from pcode.tracking.logging import info, \
-    logging_display_training, logging_display_val, \
-    update_performance_tracker
-from pcode.tracking.meter import define_local_training_tracker,\
-    define_val_tracker, evaluate_gloabl_performance
+from pcode.tracking.logging import \
+    info, logging_display_training, logging_display_val
+from pcode.tracking.meter import \
+    define_local_training_tracker, define_val_tracker, \
+    evaluate_gloabl_performance, update_performance_tracker
 
 
 def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
@@ -51,14 +50,8 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
 
             # inference and get current performance.
             optimizer.zero_grad()
-            loss, performance = inference(model, criterion, metrics, _input, _target)
+            loss = inference(model, criterion, metrics, _input, _target, tracker)
             loss.backward()
-
-            # update performance tracker
-            update_performance_tracker(tracker, loss, performance, _input.size(0))
-
-            # sync and broadcast gradients to other nodes by using reduce_sum.
-            aggregate_gradients(args, model)
             optimizer.step()
 
             # finish one epoch training and to decide if we want to val our model.
@@ -85,12 +78,13 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
             train_loader, val_loader = define_dataset(args, shuffle=True)
 
 
-def inference(model, criterion, metrics, _input, _target):
+def inference(model, criterion, metrics, _input, _target, tracker):
     """Inference on the given model and get loss and accuracy."""
     output = model(_input)
     loss = criterion(output, _target)
     performance = accuracy(output.data, _target, topk=metrics)
-    return loss, performance
+    update_performance_tracker(tracker, loss, performance, _input.size(0))
+    return loss
 
 
 def do_validate(args, model, optimizer, criterion, metrics, val_loader):
@@ -141,10 +135,8 @@ def validate(args, model, criterion, metrics, val_loader):
         _input, _target = _load_data_batch(args, _input, _target)
 
         with torch.no_grad():
-            loss, performance = inference(
-                model, criterion, metrics, _input, _target)
-            tracker = update_performance_tracker(
-                tracker, loss, performance, _input.size(0))
+            loss = inference(
+                model, criterion, metrics, _input, _target, tracker)
 
     info('Aggregate val accuracy from different partitions.')
     performance = [

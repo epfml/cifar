@@ -2,6 +2,8 @@
 import torch
 from torch.optim.optimizer import Optimizer, required
 
+from pcode.flow.flow_utils import get_aggregator_fn
+
 
 class SGD(Optimizer):
     r"""Implements stochastic gradient descent (optionally with momentum).
@@ -60,12 +62,17 @@ class SGD(Optimizer):
         # store the whole training arguments.
         self.args = args
 
+        # define the aggregator.
+        self.aggregator = get_aggregator_fn(
+            aggregator_name='centralized',
+            rank=args.graph.rank, neighbors=args.graph.ranks)
+
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
-    def step(self, closure=None):
+    def step(self, closure=None, **kargs):
         """Performs a single optimization step.
 
         Avoid to use momentum to accumulate the gradients from other workers.
@@ -86,16 +93,22 @@ class SGD(Optimizer):
             nesterov = group['nesterov']
 
             for p in group['params']:
+                # get param_state
+                param_state = self.state[p]
+
+                # get the gradient
                 if p.grad is None:
                     continue
                 d_p = p.grad.data
-                param_state = self.state[p]
+
+                # aggregate the gradient.
+                self.aggregator._agg(d_p, op='avg')
 
                 # add weight decay.
                 if weight_decay != 0:
                     d_p.add_(weight_decay, p.data)
 
-                # apply local momentum.
+                # apply the momentum.
                 if momentum != 0:
                     if 'momentum_buffer' not in param_state:
                         buf = param_state['momentum_buffer'] = torch.zeros_like(p.data)

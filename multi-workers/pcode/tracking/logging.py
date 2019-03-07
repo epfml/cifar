@@ -90,12 +90,3 @@ def logging_display_val(args):
         args.graph.rank, args.local_index,
         args.best_epoch[-1] if len(args.best_epoch) != 0 else '',
         args.epoch_, args.best_prec1))
-
-
-def update_performance_tracker(tracker, loss, performance, size):
-    tracker['losses'].update(loss.item(), size)
-
-    if len(performance) == 2:
-        tracker['top5'].update(performance[1], size)
-    tracker['top1'].update(performance[0], size)
-    return tracker

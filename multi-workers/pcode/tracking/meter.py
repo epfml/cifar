@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pcode.flow.communication import global_average
+from pcode.flow.flow_utils import global_average
 
 
 def define_local_training_tracker():
@@ -16,6 +16,15 @@ def define_trackers(names):
 
 def evaluate_gloabl_performance(meter):
     return global_average(meter.sum, meter.count)
+
+
+def update_performance_tracker(tracker, loss, performance, size):
+    tracker['losses'].update(loss.item(), size)
+
+    if len(performance) == 2:
+        tracker['top5'].update(performance[1], size)
+    tracker['top1'].update(performance[0], size)
+    return tracker
 
 
 class AverageMeter(object):

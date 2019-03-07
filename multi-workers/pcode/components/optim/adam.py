@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
 import math
 import torch
 from torch.optim.optimizer import Optimizer
+
+from pcode.flow.flow_utils import get_aggregator_fn
 
 
 class Adam(Optimizer):
@@ -41,12 +44,17 @@ class Adam(Optimizer):
         # store the whole training arguments.
         self.args = args
 
+        # define the aggregator.
+        self.aggregator = get_aggregator_fn(
+            aggregator_name='centralized',
+            rank=args.graph.rank, neighbors=args.graph.ranks)
+
     def __setstate__(self, state):
         super(Adam, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
 
-    def step(self, closure=None):
+    def step(self, closure=None, **kargs):
         """Performs a single optimization step.
         Arguments:
             closure (callable, optional): A closure that reevaluates the model
@@ -58,15 +66,20 @@ class Adam(Optimizer):
 
         for group in self.param_groups:
             for p in group['params']:
+                # get param_state
+                state = self.state[p]
+
+                # get the gradient
                 if p.grad is None:
                     continue
                 grad = p.grad.data
                 if grad.is_sparse:
                     raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
 
-                state = self.state[p]
+                # aggregate the gradient.
+                self.aggregator._agg(grad, op='avg')
 
-                # State initialization
+                # State initialization for Adam.
                 if len(state) == 0:
                     state['step'] = 0
                     # Exponential moving average of gradient values
