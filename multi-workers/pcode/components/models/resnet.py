@@ -265,7 +265,7 @@ def resnet(args):
     resnet_size = int(args.arch.replace('resnet', ''))
     dataset = args.data
 
-    if 'cifar' in args.data or 'svhn' in args.data or 'downsampled_imagenet' in args.data:
+    if 'cifar' in args.data or 'svhn' in args.data:
         model = ResNet_cifar(dataset=dataset, resnet_size=resnet_size)
     elif 'imagenet' in dataset:
         model = ResNet_imagenet(dataset=dataset, resnet_size=resnet_size)

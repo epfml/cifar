@@ -134,7 +134,7 @@ def wideresnet(args):
     net_depth = int(args.arch.replace('wideresnet', ''))
     dataset = args.data
 
-    if 'cifar' in args.data or 'svhn' in args.data or 'downsampled_imagenet' in args.data:
+    if 'cifar' in args.data or 'svhn' in args.data:
         model = WideResNet(
             dataset=dataset, net_depth=net_depth,
             widen_factor=args.wideresnet_widen_factor,
