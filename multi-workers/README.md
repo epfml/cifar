@@ -1,5 +1,5 @@
 # Getting Started
-For the detailed experimental setup of the environment, please refer to the `README.md` under the main `code` folder.
+For the detailed experimental setup of the environment, please refer to the `platform` folder.
 
 
 ## Running the tests
