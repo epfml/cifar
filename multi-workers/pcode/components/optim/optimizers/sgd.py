@@ -2,7 +2,7 @@
 import torch
 from torch.optim.optimizer import Optimizer, required
 
-from pcode.flow.flow_utils import get_aggregator_fn
+from pcode.components.optim.utils.communication import get_aggregator_fn
 
 
 class SGD(Optimizer):

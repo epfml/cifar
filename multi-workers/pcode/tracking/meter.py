@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pcode.flow.flow_utils import global_average
+from pcode.components.optim.utils.communication import global_average
 
 
 def define_local_training_tracker():
