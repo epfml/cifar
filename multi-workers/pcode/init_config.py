@@ -18,7 +18,7 @@ def set_local_stat(args):
 
 def init_config(args):
     # define the graph for the computation.
-    cur_rank = dist.get_rank()
+    cur_rank = dist.get_rank() if args.mpi_enabled else 0
     args.graph = FCGraph(cur_rank, args.blocks, args.on_cuda, args.world)
 
     if args.graph.on_cuda:

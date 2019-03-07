@@ -95,7 +95,7 @@ class CentralizedAggregation(Aggregation):
         super(CentralizedAggregation, self).__init__(rank, neighbors)
         assert rank in neighbors
 
-    def _agg(self, data, op):
+    def _agg(self, data, op, mpi_enabled=True):
         """Aggregate data using `op` operation.
         Args:
             data (:obj:`torch.Tensor`): A Tensor to be aggragated.
@@ -103,6 +103,8 @@ class CentralizedAggregation(Aggregation):
         Returns:
             :obj:`torch.Tensor`: An aggregated tensor.
         """
+        if not mpi_enabled:
+            return data
         if op == 'avg':
             dist.all_reduce(data, op=dist.ReduceOp.SUM)
             data /= self.world_size
@@ -120,7 +122,7 @@ class DecentralizedAggregation(Aggregation):
         super(DecentralizedAggregation, self).__init__(rank, neighbors)
         assert rank not in neighbors
 
-    def _agg(self, data, op):
+    def _agg(self, data, op, mpi_enabled=True):
         """Aggregate data using `op` operation.
         Args:
             data (:obj:`torch.Tensor`): A Tensor to be aggragated.
@@ -128,6 +130,9 @@ class DecentralizedAggregation(Aggregation):
         Returns:
             :obj:`torch.Tensor`: An aggregated tensor.
         """
+        if not mpi_enabled:
+            raise NotImplementedError("MPI must be available for decentralized aggregation.")
+
         # Create some tensors to host the values from neighborhood.
         local_data = {i: torch.zeros_like(data) for i in self.neighbors}
         local_data[self.rank] = data

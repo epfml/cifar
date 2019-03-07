@@ -102,7 +102,10 @@ class SGD(Optimizer):
                 d_p = p.grad.data
 
                 # aggregate the gradient.
-                self.aggregator._agg(d_p, op='avg')
+                self.aggregator._agg(
+                    d_p, op='avg', 
+                    mpi_enabled=self.args.mpi_enabled
+                )
 
                 # add weight decay.
                 if weight_decay != 0:

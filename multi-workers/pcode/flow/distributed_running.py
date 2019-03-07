@@ -46,7 +46,7 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
             adjust_learning_rate(args, optimizer, scheduler)
 
             # load data
-            _input, _target = load_data_batch(args, _input, _target, tracker)
+            _input, _target = load_data_batch(args, _input, _target)
 
             # inference and get current performance.
             optimizer.zero_grad()
@@ -135,8 +135,7 @@ def validate(args, model, criterion, metrics, val_loader):
         _input, _target = _load_data_batch(args, _input, _target)
 
         with torch.no_grad():
-            loss = inference(
-                model, criterion, metrics, _input, _target, tracker)
+            inference(model, criterion, metrics, _input, _target, tracker)
 
     info('Aggregate val accuracy from different partitions.')
     performance = [

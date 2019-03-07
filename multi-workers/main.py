@@ -8,8 +8,11 @@ from pcode.flow.distributed_running import train_and_validate
 
 
 def main(args):
-    """distributed training via mpi backend."""
-    dist.init_process_group('mpi')
+    try:
+        dist.init_process_group('mpi')
+        args.mpi_enabled = True
+    except AttributeError as e:
+        args.mpi_enabled = False
 
     # init the config.
     init_config(args)
@@ -19,6 +22,7 @@ def main(args):
 
     # train amd evaluate model.
     train_and_validate(args, model, criterion, scheduler, optimizer, metrics)
+
 
 
 if __name__ == '__main__':

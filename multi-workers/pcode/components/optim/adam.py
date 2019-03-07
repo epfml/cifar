@@ -77,7 +77,10 @@ class Adam(Optimizer):
                     raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
 
                 # aggregate the gradient.
-                self.aggregator._agg(grad, op='avg')
+                self.aggregator._agg(
+                    grad, op='avg', 
+                    mpi_enabled=self.args.mpi_enabled
+                )
 
                 # State initialization for Adam.
                 if len(state) == 0:

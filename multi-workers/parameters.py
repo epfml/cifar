@@ -34,9 +34,9 @@ def get_args():
     parser.add_argument('--pin_memory', default=True, type=str2bool)
 
     # model
-    parser.add_argument('--arch', '-a', default='alexnet',
+    parser.add_argument('--arch', '-a', default='resnet20',
                         help='model architecture: ' +
-                             ' | '.join(model_names) + ' (default: alexnet)')
+                             ' | '.join(model_names) + ' (default: resnet20)')
 
     # training and learning scheme
     parser.add_argument('--stop_criteria', type=str, default='epoch')
@@ -116,7 +116,7 @@ def get_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--checkpoint_index', type=str, default=None)
     parser.add_argument('--save_all_models', type=str2bool, default=False)
-    parser.add_argument('--save_some_models', type=str, default=None)
+    parser.add_argument('--save_some_models', type=str, default='')
     parser.add_argument('--log_dir', default=LOG_DIRECTORY)
     parser.add_argument('--plot_dir', default=None,
                         type=str, help='path to plot the result')
@@ -140,7 +140,7 @@ def get_args():
     parser.add_argument('--dist_backend', default='gloo', type=str,
                         help='distributed backend')
 
-    parser.add_argument('--blocks', default='2,2', type=str,
+    parser.add_argument('--blocks', default='1', type=str,
                         help='number of blocks (divide processes to blocks)')
     parser.add_argument('--on_cuda', type=str2bool, default=True)
     parser.add_argument('--world', default=None, type=str)

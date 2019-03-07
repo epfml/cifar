@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import time
-
 import torch
 
 from pcode.tracking.logging import info
@@ -21,17 +19,9 @@ def _load_data_batch(args, _input, _target):
     return _input, _target
 
 
-def load_data_batch(args, _input, _target, tracker):
+def load_data_batch(args, _input, _target):
     """Load a mini-batch and record the loading time."""
-    # get variables.
-    start_data_time = time.time()
-
     _input, _target = _load_data_batch(args, _input, _target)
-
-    # measure the data loading time
-    end_data_time = time.time()
-    tracker['data_time'].update(end_data_time - start_data_time)
-    tracker['end_data_time'] = end_data_time
     return _input, _target
 
 
@@ -51,7 +41,7 @@ def partition_dataset(args, shuffle, dataset_type='train'):
     world_size = args.graph.n_nodes
 
     # partition data.
-    if args.partition_data or dataset_type == 'test':
+    if (args.partition_data or dataset_type == 'test') and args.mpi_enabled:
         partition_sizes = [1.0 / world_size for _ in range(world_size)]
         partition = DataPartitioner(args, dataset, shuffle, partition_sizes)
         data_to_load = partition.use(args.graph.rank)

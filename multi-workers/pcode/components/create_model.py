@@ -16,7 +16,11 @@ def define_model(args):
     else:
         model = models.__dict__[args.arch](args)
 
-    consistent_model(args, model)
+    # get a consistent init model over the world.
+    if args.mpi_enabled:
+        consistent_model(args, model)
+
+    # get the model stat info.
     get_model_stat(args, model)
     return model
 
