@@ -1,0 +1,14 @@
+version: '2'
+services:
+    base:
+        build:
+            context: .
+            dockerfile: base/Dockerfile
+        image:  user/base:cuda9
+    pytorch-mpi:
+        build:
+            context: .
+            dockerfile: pytorch-mpi/Dockerfile
+        image:  user/pytorch-mpi:cuda9
+        depends_on:
+          - base
