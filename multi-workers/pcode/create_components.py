@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+import torch.nn as nn
+
 from pcode.components.create_optimizer import define_optimizer
-from pcode.components.create_criterion import define_criterion
 from pcode.components.create_metrics import define_metrics
 from pcode.components.create_model import define_model
 from pcode.components.create_scheduler import define_scheduler
@@ -31,3 +32,11 @@ def create_components(args):
     # (optional) reload checkpoint
     maybe_resume_from_checkpoint(args, model, optimizer)
     return model, criterion, scheduler, optimizer, metrics
+
+
+def define_criterion(args):
+    if 'least_square' in args.arch:
+        criterion = nn.MSELoss(reduction='mean')
+    else:
+        criterion = nn.CrossEntropyLoss(reduction='mean')
+    return criterion

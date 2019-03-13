@@ -2,9 +2,9 @@
 import torch.distributed as dist
 
 from parameters import get_args
-from pcode.components.create_components import create_components
+from pcode.create_components import create_components
 from pcode.init_config import init_config
-from pcode.flow.distributed_running import train_and_validate
+from pcode.distributed_running import train_and_validate
 
 
 def main(args):
@@ -22,7 +22,6 @@ def main(args):
 
     # train amd evaluate model.
     train_and_validate(args, model, criterion, scheduler, optimizer, metrics)
-
 
 
 if __name__ == '__main__':

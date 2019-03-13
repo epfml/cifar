@@ -8,18 +8,17 @@ from pcode.components.create_metrics import accuracy
 from pcode.components.create_scheduler import adjust_learning_rate
 from pcode.components.create_dataset import \
     define_dataset, load_data_batch, _load_data_batch
-from pcode.tracking.checkpoint import save_to_checkpoint
-from pcode.flow.flow_utils import is_stop, get_current_epoch
-from pcode.tracking.logging import \
-    info, logging_display_training, logging_display_val
-from pcode.tracking.meter import \
+from pcode.utils.checkpoint import save_to_checkpoint
+from pcode.utils.logging import display_training_stat as logging_display_training
+from pcode.utils.logging import display_test_stat as logging_display_val
+from pcode.utils.meter import \
     define_local_training_tracker, define_val_tracker, \
     evaluate_gloabl_performance, update_performance_tracker
 
 
 def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
     """The training scheme of Hierarchical Local SGD."""
-    info('start training and validation.')
+    print('start training and validation.')
 
     # get data loader.
     train_loader, val_loader = define_dataset(args, shuffle=True)
@@ -30,7 +29,7 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
 
     # init global variable.
     tracker = define_local_training_tracker()
-    info('enter the training.')
+    print('enter the training.')
 
     # break until finish expected full epoch training.
     while True:
@@ -71,10 +70,10 @@ def train_and_validate(args, model, criterion, scheduler, optimizer, metrics):
 
         # reshuffle the data.
         if args.reshuffle_per_epoch:
-            info('reshuffle the dataset.')
+            print('reshuffle the dataset.')
             del train_loader, val_loader
             gc.collect()
-            info('reshuffle the dataset.')
+            print('reshuffle the dataset.')
             train_loader, val_loader = define_dataset(args, shuffle=True)
 
 
@@ -118,7 +117,7 @@ def do_validate(args, model, optimizer, criterion, metrics, val_loader):
             is_best, dirname=args.checkpoint_root,
             filename='checkpoint.pth.tar',
             save_all=args.save_all_models)
-    info('finished validation.')
+    print('finished validation.')
 
 
 def validate(args, model, criterion, metrics, val_loader):
@@ -129,7 +128,7 @@ def validate(args, model, criterion, metrics, val_loader):
     # switch to evaluation mode
     model.eval()
 
-    info('Do validation.')
+    print('Do validation.')
     for _input, _target in val_loader:
         # load data and check performance.
         _input, _target = _load_data_batch(args, _input, _target)
@@ -137,11 +136,26 @@ def validate(args, model, criterion, metrics, val_loader):
         with torch.no_grad():
             inference(model, criterion, metrics, _input, _target, tracker)
 
-    info('Aggregate val accuracy from different partitions.')
+    print('Aggregate val accuracy from different partitions.')
     performance = [
         evaluate_gloabl_performance(tracker[x]) for x in ['top1', 'top5']
     ]
 
-    info('Val at batch: {}. Process: {}. Prec@1: {:.3f} Prec@5: {:.3f}'.format(
+    print('Val at batch: {}. Process: {}. Prec@1: {:.3f} Prec@5: {:.3f}'.format(
         args.local_index, args.graph.rank, performance[0], performance[1]))
     return performance
+
+
+"""some utility functions."""
+
+
+def get_current_epoch(args):
+    args.epoch_ = args.local_index / args.num_batches_train_per_device_per_epoch
+    args.epoch = int(args.epoch_)
+
+
+def is_stop(args):
+    if args.stop_criteria == 'epoch':
+        return args.epoch >= args.num_epochs
+    elif args.stop_criteria == 'iteration':
+        return args.local_index >= args.num_iterations_per_worker
