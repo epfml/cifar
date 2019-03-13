@@ -75,6 +75,9 @@ def get_args():
 
     # optimizer
     parser.add_argument('--optimizer', type=str, default='sgd')
+    parser.add_argument('--sparsification_scheme', type=str, default='random')
+    parser.add_argument('--communication_scheme', type=str, default='all_reduce')
+    parser.add_argument('--num_coordinates', type=float, default=0.1)
 
     parser.add_argument('--adam_beta_1', default=0.9, type=float)
     parser.add_argument('--adam_beta_2', default=0.999, type=float)
@@ -116,7 +119,7 @@ def get_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--checkpoint_index', type=str, default=None)
     parser.add_argument('--save_all_models', type=str2bool, default=False)
-    parser.add_argument('--save_some_models', type=str, default='')
+    parser.add_argument('--save_some_models', type=str, default=None)
     parser.add_argument('--log_dir', default=LOG_DIRECTORY)
     parser.add_argument('--plot_dir', default=None,
                         type=str, help='path to plot the result')
@@ -125,7 +128,7 @@ def get_args():
 
     """meta info."""
     parser.add_argument('--user', type=str, default='lin')
-    parser.add_argument('--project', type=str, 
+    parser.add_argument('--project', type=str,
                         default='distributed_adam_type_algorithm')
     parser.add_argument('--experiment', type=str, default=None)
     parser.add_argument('--use_db', type=str2bool, default=False)
@@ -149,6 +152,7 @@ def get_args():
     args = parser.parse_args()
     if args.timestamp is None:
         args.timestamp = get_checkpoint_folder_name(args)
+
     return args
 
 

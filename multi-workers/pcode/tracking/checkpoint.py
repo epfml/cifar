@@ -30,7 +30,8 @@ def init_checkpoint(args):
         args.experiment if args.experiment is not None else '',
         args.timestamp)
     args.checkpoint_dir = join(args.checkpoint_root, str(args.graph.rank))
-    args.save_some_models = args.save_some_models.split(',')
+    if args.save_some_models is not None:
+        args.save_some_models = args.save_some_models.split(',')
 
     # if the directory does not exists, create them.
     build_dirs(args.checkpoint_dir)

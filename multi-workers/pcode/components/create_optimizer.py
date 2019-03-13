@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pcode.components.optim.optimizers.sgd import SGD
 from pcode.components.optim.optimizers.adam import Adam
+from pcode.components.optim.optimizers.sparse_sgd import SparseSGD
 
 
 def define_optimizer(args, model):
@@ -26,5 +27,10 @@ def define_optimizer(args, model):
             params, lr=args.learning_rate,
             betas=(args.adam_beta_1, args.adam_beta_2),
             eps=args.adam_eps, args=args)
+    elif args.optimizer == 'sparse':
+        return SparseSGD(
+            params, lr=args.learning_rate,
+            momentum=args.momentum_factor,
+            args=args)
     else:
         raise NotImplementedError

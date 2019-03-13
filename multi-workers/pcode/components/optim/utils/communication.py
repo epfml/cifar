@@ -2,7 +2,6 @@
 import torch
 import torch.distributed as dist
 
-
 """some auxiliary functions for communication."""
 
 
@@ -15,6 +14,7 @@ def global_average(sum, count):
             return 0
         else:
             return all_sum / all_count
+
     avg = helper([sum, count])
     return avg
 
@@ -81,7 +81,7 @@ class CentralizedAggregation(Aggregation):
         super(CentralizedAggregation, self).__init__(rank, neighbors)
         assert rank in neighbors
 
-    def _agg(self, data, op, mpi_enabled=True):
+    def _agg(self, data, op, mpi_enabled=True, communication_scheme='all_reduce'):
         """Aggregate data using `op` operation.
         Args:
             data (:obj:`torch.Tensor`): A Tensor to be aggragated.
@@ -91,14 +91,26 @@ class CentralizedAggregation(Aggregation):
         """
         if not mpi_enabled:
             return data
-        if op == 'avg':
-            dist.all_reduce(data, op=dist.ReduceOp.SUM)
-            data /= self.world_size
-        elif op == 'sum':
-            dist.all_reduce(data, op=dist.ReduceOp.SUM)
+
+        if communication_scheme == "all_reduce":
+            if op == 'avg':
+                dist.all_reduce(data, op=dist.ReduceOp.SUM)
+                data /= self.world_size
+            elif op == 'sum':
+                dist.all_reduce(data, op=dist.ReduceOp.SUM)
+            else:
+                raise NotImplementedError
+
+            return data
+
+        elif communication_scheme == "all_gather":
+
+            gathered_list = [torch.zeros_like(data) for _ in range(int(self.world_size))]
+            dist.all_gather(gathered_list, data)
+
+            return gathered_list
         else:
             raise NotImplementedError
-        return data
 
 
 class DecentralizedAggregation(Aggregation):
