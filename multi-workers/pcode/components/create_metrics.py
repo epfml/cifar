@@ -1,32 +1,43 @@
 # -*- coding: utf-8 -*-
-from pcode.tracking.meter import AverageMeter
 
 
-def define_metrics(args, model):
-    if 'least_square' not in args.arch:
-        if model.num_classes >= 5:
-            return (1, 5)
+class Metrics(object):
+    """"""
+    def __init__(self, model, task='classification'):
+        self.model = model
+        self.task = task
+        self.metric_names = None
+        self.metrics_fn = self._infer()
+
+    def evaluate(self, output, target):
+        return self.metrics_fn(output, target)
+
+    def _infer(self):
+        if 'classification' == self.task:
+            self.topks = (1, 5) if self.model.num_classes >= 5 else (1,)
+            self.metric_names = ['top{}'.format(topk) for topk in self.topks]
+            return self._accuracy
         else:
-            return (1,)
-    else:
-        return ()
+            raise NotImplementedError
 
+        # some safety check.
+        assert self.metric_names is not None
 
-def accuracy(output, target, topk=(1,)):
-    """Computes the precision@k for the specified values of k"""
-    res = []
+    def _accuracy(self, output, target):
+        """Computes the precision@k for the specified values of k"""
+        res = []
 
-    if len(topk) > 0:
-        maxk = max(topk)
-        batch_size = target.size(0)
+        if len(self.topks) > 0:
+            maxk = max(self.topks)
+            batch_size = target.size(0)
 
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
+            _, pred = output.topk(maxk, 1, True, True)
+            pred = pred.t()
+            correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size).item())
-    else:
-        res += [0]
-    return res
+            for topk in self.topks:
+                correct_k = correct[: topk].view(-1).float().sum(0, keepdim=True)
+                res.append(correct_k.mul_(100.0 / batch_size).item())
+        else:
+            res += [0]
+        return res

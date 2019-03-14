@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
+import platform
 
 
 class JSONLogger:
@@ -48,6 +49,10 @@ class JSONLogger:
             json.dump(self.values, fp, indent=' ')
 
 
+def init_logging(args):
+    args.log_metric = JSONLogger(args.checkpoint_dir).log_metric
+
+
 def log_metric(name, values, tags):
     """
     Log timeseries data.
@@ -66,20 +71,43 @@ def display_args(args):
                  'device', 'on_cuda', 'get_neighborhood']:
         print('{}: {}'.format(name, getattr(args.graph, name)))
 
+    print('experiment platform:')
+    print(
+        'Rank {} with block {} on {} {}-{}'.format(
+            args.graph.rank,
+            args.graph.ranks_with_blocks[args.graph.rank],
+            platform.node(),
+            'GPU' if args.graph.on_cuda else 'CPU',
+            args.graph.device
+            )
+        )
+
 
 def display_training_stat(args, tracker):
-    log_info = 'Epoch: {epoch:.3f}. Local index: {local_index}. Loss: {loss:.4f} | top1: {top1:.4f} | top5: {top5:.4f}'.format(
-        epoch=args.epoch_,
-        local_index=args.local_index,
-        loss=tracker['losses'].avg,
-        top1=tracker['top1'].avg,
-        top5=tracker['top5'].avg)
-    print(log_info)
+    for name, stat in tracker.stat.items():
+        args.log_metric(
+            name=name,
+            values={
+                'epoch': args.epoch_,
+                'local_index': args.local_index, 'value': stat.avg},
+            tags={'split': 'train'}
+        )
 
 
-def display_test_stat(args):
+def display_test_stat(args, tracker, global_performance):
+    for name, perf in zip(tracker.metrics_to_track, global_performance):
+        args.log_metric(
+            name=name,
+            values={
+                'epoch': args.epoch_,
+                'local_index': args.local_index, 'value': perf},
+            tags={'split': 'test'}
+        )
+
+
+def dispaly_best_test_stat(args):
     print('best accuracy for rank {} at local index {} \
         (best epoch {:.3f}, current epoch {:.3f}): {}.'.format(
         args.graph.rank, args.local_index,
         args.best_epoch[-1] if len(args.best_epoch) != 0 else '',
-        args.epoch_, args.best_prec1))
+        args.epoch_, args.best_primary_te_score))

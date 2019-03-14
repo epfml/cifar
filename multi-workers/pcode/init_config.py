@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
-import platform
-
 import torch
 import torch.distributed as dist
 
-from pcode.tracking.checkpoint import init_checkpoint
+from pcode.utils.checkpoint import init_checkpoint
 from pcode.utils.topology import FCGraph
-from pcode.tracking.logging import init_logging, log_args, info
+from pcode.utils.logging import init_logging, display_args
 
 
 def set_local_stat(args):
     args.local_index = 0
-    args.best_prec1 = 0
+    args.best_primary_te_score = 0
     args.best_epoch = []
-    args.tracking = []
 
 
 def init_config(args):
@@ -38,13 +35,4 @@ def init_config(args):
     init_logging(args)
 
     # display the arguments' info.
-    log_args(args)
-    info(
-        'Rank {} with block {} on {} {}-{}'.format(
-            args.graph.rank,
-            args.graph.ranks_with_blocks[args.graph.rank],
-            platform.node(),
-            'GPU' if args.graph.on_cuda else 'CPU',
-            args.graph.device
-            )
-        )
+    display_args(args)
