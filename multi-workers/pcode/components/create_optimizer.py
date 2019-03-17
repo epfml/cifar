@@ -19,17 +19,17 @@ def define_optimizer(conf, model):
     # define the optimizer.
     if conf.optimizer == 'sgd':
         return SGD(
-            params, lr=conf.learning_rate,
+            params, lr=conf.lr,
             momentum=conf.momentum_factor,
             nesterov=conf.use_nesterov, conf=conf)
     elif conf.optimizer == 'adam':
         return Adam(
-            params, lr=conf.learning_rate,
+            params, lr=conf.lr,
             betas=(conf.adam_beta_1, conf.adam_beta_2),
             eps=conf.adam_eps, conf=conf)
     elif conf.optimizer == 'sparse':
         return SparseSGD(
-            params, lr=conf.learning_rate,
+            params, lr=conf.lr,
             momentum=conf.momentum_factor,
             conf=conf)
     else:

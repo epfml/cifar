@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
+import time
 import platform
 
 from pcode.utils.op_files import write_txt
@@ -37,8 +38,9 @@ class Logger:
             name=name, values=values, tags=tags))
 
     def log(self, value):
-        print(value)
-        self.save_txt(value)
+        content = time.strftime("%Y-%m-%d %H:%M:%S") + "\t" + value
+        print(content)
+        self.save_txt(content)
 
     def save_json(self):
         """
@@ -52,24 +54,22 @@ class Logger:
 
 
 def display_args(conf):
-    print('parameters: ')
+    print('\n\nparameters: ')
     for arg in vars(conf):
-        print(str(arg) + '\t' + str(getattr(conf, arg)))
-    for name in ['n_nodes', 'world', 'rank',
-                 'ranks_with_blocks', 'blocks_with_ranks',
-                 'device', 'on_cuda', 'get_neighborhood']:
-        print('{}: {}'.format(name, getattr(conf.graph, name)))
+        print('\t' + str(arg) + '\t' + str(getattr(conf, arg)))
 
-    print('experiment platform:')
-    print(
-        'Rank {} with block {} on {} {}-{}'.format(
+    print('\n\nexperiment platform: rank {} with block {} on {} {}-{}'.format(
             conf.graph.rank,
             conf.graph.ranks_with_blocks[conf.graph.rank],
             platform.node(),
             'GPU' if conf.graph.on_cuda else 'CPU',
             conf.graph.device
-            )
-        )
+            ))
+    for name in ['n_nodes', 'world', 'rank',
+                 'ranks_with_blocks', 'blocks_with_ranks',
+                 'device', 'on_cuda', 'get_neighborhood']:
+        print('\t{}: {}'.format(name, getattr(conf.graph, name)))
+    print('\n\n')
 
 
 def display_training_stat(conf, scheduler, tracker):
@@ -78,6 +78,7 @@ def display_training_stat(conf, scheduler, tracker):
             name=name,
             values={
                 'epoch': scheduler.epoch_,
+                'time': time.strftime("%Y-%m-%d %H:%M:%S"),
                 'local_index': scheduler.local_index, 'value': stat.avg},
             tags={'split': 'train'}
         )
@@ -88,7 +89,9 @@ def display_test_stat(conf, scheduler, tracker, global_performance):
         conf.logger.log_metric(
             name=name,
             values={
-                'epoch': scheduler.epoch_, 'value': perf},
+                'epoch': scheduler.epoch_,
+                'time': time.strftime("%Y-%m-%d %H:%M:%S"),
+                'value': perf},
             tags={'split': 'test'}
         )
     conf.logger.save_json()

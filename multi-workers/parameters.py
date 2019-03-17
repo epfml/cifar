@@ -165,11 +165,5 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-def print_args(args):
-    print('parameters: ')
-    for arg in vars(args):
-        print(arg, getattr(args, arg))
-
-
 if __name__ == '__main__':
     args = get_args()

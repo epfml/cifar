@@ -13,7 +13,7 @@ def load_data_batch(conf, _input, _target):
 
 
 def define_dataset(conf, shuffle):
-    print('create {} dataset for rank {}'.format(conf.data, conf.graph.rank))
+    print('Create dataset: {} for rank {}.'.format(conf.data, conf.graph.rank))
     train_loader = partition_dataset(conf, shuffle, dataset_type='train')
     val_loader = partition_dataset(conf, shuffle, dataset_type='test')
 
@@ -32,21 +32,10 @@ def partition_dataset(conf, shuffle, dataset_type='train'):
         partition_sizes = [1.0 / world_size for _ in range(world_size)]
         partition = DataPartitioner(conf, dataset, shuffle, partition_sizes)
         data_to_load = partition.use(conf.graph.rank)
-        print('partitioned data and use subdata.')
+        print('Data partition: partitioned data and use subdata.')
     else:
         data_to_load = dataset
-        print('used whole data.')
-
-    if dataset_type == 'train':
-        conf.train_dataset_size = len(dataset)
-        print('  We have {} samples for {}, \
-             load {} data for process (rank {}).'.format(
-             len(dataset), dataset_type, len(data_to_load), conf.graph.rank))
-    else:
-        conf.val_dataset_size = len(dataset)
-        print('  We have {} samples for {}, \
-             load {} val data for process (rank {}).'.format(
-             len(dataset), dataset_type, len(data_to_load), conf.graph.rank))
+        print('Data partition: used whole data.')
 
     # use Dataloader.
     data_type_label = (dataset_type == 'train')
@@ -56,8 +45,17 @@ def partition_dataset(conf, shuffle, dataset_type='train'):
         num_workers=conf.num_workers, pin_memory=conf.pin_memory,
         drop_last=False)
 
-    print('we have {} batches for {} for rank {}.'.format(
-         len(data_loader), dataset_type, conf.graph.rank))
+    if dataset_type == 'train':
+        conf.train_dataset_size = len(dataset)
+    else:
+        conf.val_dataset_size = len(dataset)
+
+    print(
+        ('Data stat: we have {} samples for {}, ' +
+            'load {} data for process (rank {}). ' +
+            'The number of batches is {}.').format(
+            len(dataset), dataset_type, len(data_to_load), conf.graph.rank,
+            len(data_loader)))
     return data_loader
 
 
@@ -76,7 +74,7 @@ def get_data_stat(conf, train_loader, val_loader):
     conf.num_batches_val_per_device_per_epoch = len(val_loader)
 
     # define some parameters for training.
-    print('we have {} epochs, \
+    print('\nData Stat: we have {} epochs, \
          {} mini-batches per device for training. \
          {} mini-batches per device for val. \
          The batch size: {}.'.format(

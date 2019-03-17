@@ -33,7 +33,7 @@ class LRScheduler(object):
 
     def init_learning_rate(self):
         # init the learning rates.
-        self.init_warmup_lr = self.conf.lr
+        self.conf.init_warmup_lr = self.conf.lr
         self.learning_rate_per_samples = self.conf.lr / self.conf.base_batch_size
 
         if self.conf.lr_scaleup:
@@ -52,8 +52,8 @@ class LRScheduler(object):
             _scale = 1
 
         # get the eventual learning the backup.
-        self.learning_rate = _lr * _scale
-        self.old_learning_rate = self.learning_rate
+        self.conf.learning_rate = _lr * _scale
+        self.old_learning_rate = self.conf.learning_rate
 
     def init_scheduler(self):
         self.scheduler = Scheduler(self.conf).get_lr_scheduler()
@@ -94,6 +94,8 @@ class Scheduler(object):
     def get_lr_scheduler(self):
         epoch_fields, lr_fields, scale_indicators = self.get_scheduling_setup()
         lr_schedulers = self.build_lr_schedulers(epoch_fields, lr_fields, scale_indicators)
+        print('\nDefine schedule: epoch_fields={}, lr_schedulers={}\n'.format(
+            epoch_fields, lr_schedulers))
         return self._get_lr_scheduler(epoch_fields, lr_schedulers)
 
     def _get_lr_scheduler(self, epoch_fields, lr_schedulers):

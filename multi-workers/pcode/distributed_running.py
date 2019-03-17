@@ -4,7 +4,6 @@ import gc
 import torch
 import torch.distributed as dist
 
-from pcode.components.create_scheduler import adjust_learning_rate
 from pcode.components.create_dataset import define_dataset, load_data_batch
 from pcode.utils.checkpoint import save_to_checkpoint
 from pcode.utils.logging import \
@@ -14,7 +13,7 @@ from pcode.utils.stat_tracker import RuntimeTracker, BestPerf
 
 def train_and_validate(conf, model, criterion, scheduler, optimizer, metrics):
     """The training scheme of Hierarchical Local SGD."""
-    print('start training and validation.')
+    print('=>>>> start training and validation.\n')
 
     # get data loader.
     train_loader, val_loader = define_dataset(conf, shuffle=True)
@@ -24,7 +23,7 @@ def train_and_validate(conf, model, criterion, scheduler, optimizer, metrics):
     best_tracker = BestPerf(best_perf=None if 'best_perf' not in conf else conf.best_perf)
 
     # break until finish expected full epoch training.
-    print('enter the training.')
+    print('=>>>> enter the training.\n')
     while True:
         # configure local step.
         for _input, _target in train_loader:
@@ -41,7 +40,7 @@ def train_and_validate(conf, model, criterion, scheduler, optimizer, metrics):
             optimizer.step()
 
             # finish one epoch training and to decide if we want to val our model.
-            if conf.epoch_ % 1 == 0:
+            if scheduler.epoch_ % 1 == 0:
                 # each worker finish one epoch training.
                 do_validate(
                     conf, model, optimizer, criterion, scheduler, metrics,
@@ -71,7 +70,7 @@ def inference(model, criterion, metrics, _input, _target, tracker):
     output = model(_input)
     loss = criterion(output, _target)
     performance = metrics.evaluate(output, _target)
-    tracker.update_metrics([loss] + performance, n_samples=_input.size(0))
+    tracker.update_metrics([loss.item()] + performance, n_samples=_input.size(0))
     return loss
 
 

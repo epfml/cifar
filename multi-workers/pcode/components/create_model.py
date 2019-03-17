@@ -6,7 +6,6 @@ import pcode.components.models as models
 
 
 def define_model(conf):
-    print("=> creating model '{}'".format(conf.arch))
     if 'wideresnet' in conf.arch:
         model = models.__dict__['wideresnet'](conf)
     elif 'resnet' in conf.arch:
@@ -26,8 +25,8 @@ def define_model(conf):
 
 
 def get_model_stat(conf, model):
-    print('Total params for process {}: {}M'.format(
-        conf.graph.rank,
+    print("=> creating model '{}. total params for process {}: {}M".format(
+        conf.arch, conf.graph.rank,
         sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
         ))
 
