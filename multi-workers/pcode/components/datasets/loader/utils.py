@@ -9,7 +9,7 @@ from PIL import Image
 
 import torch.utils.data as data
 
-import pcode.components.datasets.tensorpack.serialize as serialize
+import pcode.components.datasets.loader.serialize as serialize
 
 
 if sys.version_info[0] == 2:

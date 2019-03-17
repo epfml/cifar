@@ -1,32 +1,19 @@
 # -*- coding: utf-8 -*-
 import torch
 
-from pcode.tracking.logging import info
-from pcode.components.datasets.partition import DataPartitioner
+from pcode.components.datasets.partition_data import DataPartitioner
 from pcode.components.datasets.prepare_data import get_dataset
 
 
-def _load_data_batch(args, _input, _target):
-    if 'least_square' in args.arch:
-        _input = _input.float()
-        _target = _target.unsqueeze_(1).float()
-    else:
-        if 'epsilon' in args.data or 'url' in args.data or 'rcv1' in args.data or 'higgs' in args.data:
-            _input, _target = _input.float(), _target.long()
-
+def load_data_batch(args, _input, _target):
+    """Load a mini-batch and record the loading time."""
     if args.graph.on_cuda:
         _input, _target = _input.cuda(), _target.cuda()
     return _input, _target
 
 
-def load_data_batch(args, _input, _target):
-    """Load a mini-batch and record the loading time."""
-    _input, _target = _load_data_batch(args, _input, _target)
-    return _input, _target
-
-
 def define_dataset(args, shuffle):
-    info('create {} dataset for rank {}'.format(args.data, args.graph.rank))
+    print('create {} dataset for rank {}'.format(args.data, args.graph.rank))
     train_loader = partition_dataset(args, shuffle, dataset_type='train')
     val_loader = partition_dataset(args, shuffle, dataset_type='test')
 
@@ -45,19 +32,19 @@ def partition_dataset(args, shuffle, dataset_type='train'):
         partition_sizes = [1.0 / world_size for _ in range(world_size)]
         partition = DataPartitioner(args, dataset, shuffle, partition_sizes)
         data_to_load = partition.use(args.graph.rank)
-        info('partitioned data and use subdata.')
+        print('partitioned data and use subdata.')
     else:
         data_to_load = dataset
-        info('used whole data.')
+        print('used whole data.')
 
     if dataset_type == 'train':
         args.train_dataset_size = len(dataset)
-        info('  We have {} samples for {}, \
+        print('  We have {} samples for {}, \
              load {} data for process (rank {}).'.format(
              len(dataset), dataset_type, len(data_to_load), args.graph.rank))
     else:
         args.val_dataset_size = len(dataset)
-        info('  We have {} samples for {}, \
+        print('  We have {} samples for {}, \
              load {} val data for process (rank {}).'.format(
              len(dataset), dataset_type, len(data_to_load), args.graph.rank))
 
@@ -69,7 +56,7 @@ def partition_dataset(args, shuffle, dataset_type='train'):
         num_workers=args.num_workers, pin_memory=args.pin_memory,
         drop_last=False)
 
-    info('we have {} batches for {} for rank {}.'.format(
+    print('we have {} batches for {} for rank {}.'.format(
          len(data_loader), dataset_type, args.graph.rank))
     return data_loader
 
@@ -89,7 +76,7 @@ def get_data_stat(args, train_loader, val_loader):
     args.num_batches_val_per_device_per_epoch = len(val_loader)
 
     # define some parameters for training.
-    info('we have {} epochs, \
+    print('we have {} epochs, \
          {} mini-batches per device for training. \
          {} mini-batches per device for val. \
          The batch size: {}.'.format(
