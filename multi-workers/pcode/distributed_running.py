@@ -101,7 +101,8 @@ def do_validate(
             best_tracker.is_best, dirname=conf.checkpoint_root,
             filename='checkpoint.pth.tar',
             save_all=conf.save_all_models)
-    print('Finished validation.')
+        print('Finished validation.')
+    dist.barrier()
 
 
 def validate(conf, model, criterion, scheduler, metrics, val_loader):
@@ -112,7 +113,7 @@ def validate(conf, model, criterion, scheduler, metrics, val_loader):
     # switch to evaluation mode
     model.eval()
 
-    print('Do validation.')
+    print('Do validation (rank={}).'.format(conf.graph.rank))
     for _input, _target in val_loader:
         # load data and check performance.
         _input, _target = load_data_batch(conf, _input, _target)

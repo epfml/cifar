@@ -77,6 +77,7 @@ def display_training_stat(conf, scheduler, tracker):
         conf.logger.log_metric(
             name=name,
             values={
+                'rank': conf.graph.rank,
                 'epoch': scheduler.epoch_,
                 'time': time.strftime("%Y-%m-%d %H:%M:%S"),
                 'local_index': scheduler.local_index, 'value': stat.avg},
@@ -91,6 +92,7 @@ def display_test_stat(conf, scheduler, tracker, global_performance):
         conf.logger.log_metric(
             name=name,
             values={
+                'rank': conf.graph.rank,
                 'epoch': scheduler.epoch_,
                 'time': cur_time,
                 'value': perf},
