@@ -2,13 +2,6 @@
 from torch.optim.optimizer import Optimizer
 
 
-def define_scheduler(args, optimizer):
-    # define the learning rate scheduler.
-    scheduler = LRScheduler(args, optimizer)
-    return scheduler
-
-
-# define the learning rate scheduler.
 class LRScheduler(object):
     def __init__(self, args, optimizer):
         if not isinstance(optimizer, Optimizer):

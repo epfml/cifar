@@ -4,7 +4,7 @@ import torch.nn as nn
 from pcode.components.create_optimizer import define_optimizer
 from pcode.components.create_metrics import Metrics
 from pcode.components.create_model import define_model
-from pcode.components.create_scheduler import define_scheduler
+from pcode.components.create_scheduler import LRScheduler
 from pcode.utils.checkpoint import maybe_resume_from_checkpoint
 
 
@@ -27,7 +27,7 @@ def create_components(args):
     optimizer = define_optimizer(args, model)
 
     # define the lr scheduler.
-    scheduler = define_scheduler(args, optimizer)
+    scheduler = LRScheduler(args, optimizer)
 
     # (optional) reload checkpoint
     maybe_resume_from_checkpoint(args, model, optimizer)
