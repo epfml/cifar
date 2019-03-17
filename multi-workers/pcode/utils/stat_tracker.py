@@ -6,42 +6,14 @@ import torch
 from pcode.components.optim.utils.communication import global_average
 
 
-class Mean(object):
-    """
-    Running average of the values that are 'add'ed
-    """
-    def __init__(self, update_weight=1):
-        """
-        :param update_weight: 1 for normal, 2 for t-average
-        """
-        self.average = None
-        self.counter = 0
-        self.update_weight = update_weight
-
-    def add(self, value, weight=1):
-        """Add a value to the accumulator"""
-        self.counter += weight
-        if self.average is None:
-            self.average = deepcopy(value)
-        else:
-            delta = value - self.average
-            self.average += delta * self.update_weight * weight / (self.counter + self.update_weight - 1)
-            if isinstance(self.average, torch.Tensor):
-                self.average.detach()
-
-    def value(self):
-        """Access the current running average"""
-        return self.average
-
-
-class Max(object):
+class MaxMeter(object):
     """
     Keeps track of the max of all the values that are 'add'ed
     """
     def __init__(self):
         self.max = None
 
-    def add(self, value):
+    def update(self, value):
         """
         Add a value to the accumulator.
         :return: `true` if the provided value became the new max
@@ -55,6 +27,29 @@ class Max(object):
     def value(self):
         """Access the current running average"""
         return self.max
+
+
+class MinMeter(object):
+    """
+    Keeps track of the max of all the values that are 'add'ed
+    """
+    def __init__(self):
+        self.min = None
+
+    def update(self, value):
+        """
+        Add a value to the accumulator.
+        :return: `true` if the provided value became the new max
+        """
+        if self.min is None or value < self.min:
+            self.min = deepcopy(value)
+            return True
+        else:
+            return False
+
+    def value(self):
+        """Access the current running average"""
+        return self.min
 
 
 class AverageMeter(object):
@@ -99,3 +94,28 @@ class RuntimeTracker(object):
     def update_metrics(self, metric_stat, n_samples):
         for idx, thing in enumerate(self.things_to_track):
             self.stat[thing].update(metric_stat[idx], n_samples)
+
+
+class BestPerf(object):
+    def __init__(self, best_perf=None):
+        self.best_perf = best_perf
+        self.cur_perf = None
+        self.best_perf_locs = []
+        self.larger_is_better = True
+
+        # define meter
+        self._define_meter()
+
+    def _define_meter(self):
+        self.meter = MaxMeter() if self.larger_is_better else MinMeter()
+
+    def update(self, perf, perf_location):
+        self.is_best = self.meter.update(perf)
+        self.cur_perf = perf
+
+        if self.is_best:
+            self.best_perf = perf
+            self.best_perf_locs += [perf_location]
+
+    def get_best_perf_loc(self):
+        return self.best_perf_locs[-1] if len(self.best_perf_locs) != 0 else None

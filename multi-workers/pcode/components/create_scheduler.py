@@ -1,127 +1,158 @@
 # -*- coding: utf-8 -*-
+from torch.optim.optimizer import Optimizer
 
 
-def define_scheduler(args):
-    # get the learning rate per sample.
-    args.learning_rate_per_samples = args.lr / args.base_batch_size
+def define_scheduler(args, optimizer):
+    # define the learning rate scheduler.
+    scheduler = LRScheduler(args, optimizer)
+    return scheduler
 
-    # get a valid learning rate.
-    args.init_warmup_lr = args.lr
 
-    if args.lr_scaleup:
-        if args.lr_scaleup_type == 'linear':
-            _lr = args.learning_rate_per_samples * args.batch_size
-            _scale = args.graph.n_nodes
-        elif args.lr_scaleup_type == 'sqrt':
-            _lr = args.lr
-            _scale = (
-                1. * args.graph.n_nodes * args.batch_size /
-                args.base_batch_size) ** 0.5
+# define the learning rate scheduler.
+class LRScheduler(object):
+    def __init__(self, args, optimizer):
+        if not isinstance(optimizer, Optimizer):
+            raise TypeError('{} is not an Optimizer'.format(
+                type(optimizer).__name__))
+        # init
+        self.args = args
+        self.optimizer = optimizer
+        self.local_index = 0
+        self.init_learning_rate()
+        self.init_scheduler()
+
+    def state_dict(self):
+        """Returns the state of the scheduler as a :class:`dict`.
+
+        It contains an entry for every variable in self.__dict__ which
+        is not the optimizer.
+        """
+        return {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
+
+    def load_state_dict(self, state_dict):
+        """Loads the schedulers state.
+
+        Arguments:
+            state_dict (dict): scheduler state. Should be an object returned
+                from a call to :meth:`state_dict`.
+        """
+        self.__dict__.update(state_dict)
+
+    def init_learning_rate(self):
+        # init the learning rates.
+        self.init_warmup_lr = self.args.lr
+        self.learning_rate_per_samples = self.args.lr / self.args.base_batch_size
+
+        if self.args.lr_scaleup:
+            if self.args.lr_scaleup_type == 'linear':
+                _lr = self.learning_rate_per_samples * self.args.batch_size
+                _scale = self.args.graph.n_nodes
+            elif self.args.lr_scaleup_type == 'sqrt':
+                _lr = self.args.lr
+                _scale = (
+                    1. * self.args.graph.n_nodes * self.args.batch_size /
+                    self.args.base_batch_size) ** 0.5
+            else:
+                raise NotImplementedError
+        else:
+            _lr = self.learning_rate_per_samples * self.args.batch_size
+            _scale = 1
+
+        # get the eventual learning the backup.
+        self.learning_rate = _lr * _scale
+        self.old_learning_rate = self.learning_rate
+
+    def init_scheduler(self):
+        self.scheduler = Scheduler(self.args).get_lr_scheduler()
+
+    def get_lr(self):
+        return self.scheduler(self.epoch_)
+
+    def step(self):
+        self.update_training_progress()
+
+        # get the new learning rate.
+        lr = self.get_lr()
+        if lr is None:
+            lr = self.old_learning_rate
+
+        # apply the new learning rate.
+        if self.old_learning_rate != lr:
+            self.old_learning_rate = lr
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = lr
+
+    def update_training_progress(self):
+        self.local_index += 1
+        self.epoch_ = self.local_index / self.args.num_batches_train_per_device_per_epoch
+        self.epoch = int(self.epoch_)
+
+    def is_stop(self):
+        if self.args.stop_criteria == 'epoch':
+            return self.epoch >= self.args.num_epochs
+        elif self.args.stop_criteria == 'iteration':
+            return self.local_index >= self.args.num_iterations_per_worker
+
+
+class Scheduler(object):
+    def __init__(self, args):
+        self.args = args
+
+    def get_lr_scheduler(self):
+        epoch_fields, lr_fields, scale_indicators = self.get_scheduling_setup()
+        lr_schedulers = self.build_lr_schedulers(epoch_fields, lr_fields, scale_indicators)
+        return self._get_lr_scheduler(epoch_fields, lr_schedulers)
+
+    def _get_lr_scheduler(self, epoch_fields, lr_schedulers):
+        def f(epoch_index):
+            def _is_fall_in(index, left_index, right_index):
+                return left_index <= index < right_index
+
+            for ind, (epoch_left, epoch_right) in enumerate(epoch_fields):
+                if _is_fall_in(epoch_index, epoch_left, epoch_right):
+                    return lr_schedulers[ind](epoch_index)
+        return f
+
+    def get_scheduling_setup(self):
+        if self.args.lr_schedule_scheme == 'strict':
+            return _get_scheduling_setup_for_strict(self.args)
+        elif 'custom_one_cycle' == self.args.lr_schedule_scheme:
+            # NOTE: The scheme yet does not support multi-GPU training.
+            # No warmup and no linear scale are applied.
+            return _get_scheduling_setup_for_onecycle(self.args)
+        elif 'custom_multistep' == self.args.lr_schedule_scheme:
+            return _get_scheduling_setup_for_multistep(self.args)
+        elif 'custom_convex_decay' == self.args.lr_schedule_scheme:
+            return _get_scheduling_setup_for_convex_decay(self.args)
         else:
             raise NotImplementedError
-        args.learning_rate = _lr * _scale
-    else:
-        _lr = args.learning_rate_per_samples * args.batch_size
-        _scale = 1
-    args.learning_rate = _lr * _scale
 
-    # just backup the current learning rate.
-    args.old_learning_rate = args.learning_rate
+    def build_lr_schedulers(self, epoch_fields, lr_fields, scale_indicators):
+        lr_schedulers = dict()
 
-    # define the learning rate scheduler.
-    lr_scheduler = get_lr_scheduler(args)
-    return lr_scheduler
+        for field_id, (epoch_field, lr_field, indicator) in \
+                enumerate(zip(epoch_fields, lr_fields, scale_indicators)):
+            lr_scheduler = self._build_lr_scheduler(epoch_field, lr_field, indicator)
+            lr_schedulers[field_id] = lr_scheduler
+        return lr_schedulers
 
+    def _build_lr_scheduler(self, epoch_field, lr_field, scale_indicator):
+        lr_left, lr_right = lr_field
+        epoch_left, epoch_right = epoch_field
+        n_steps = epoch_right - epoch_left
 
-def adjust_learning_rate(args, optimizer, lr_scheduler):
-    """Sets the learning rate to the initial LR decayed by # of accessed sample
-        We should decay the learning rate based on the number of samples that
-        we have accessed.
-    """
-    # adjust and assign learning rate.
-    lr = lr_scheduler(args.epoch_)
-
-    if lr is None:
-        lr = args.old_learning_rate
-
-    if args.old_learning_rate != lr:
-        args.old_learning_rate = lr
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-    return lr
-
-
-
-"""the stuff below related to get_lr_scheduler."""
-
-
-def get_lr_scheduler(args):
-    epoch_fields, lr_fields, scale_indicators = get_scheduling_setup(args)
-    lr_schedulers = build_lr_schedulers(args, epoch_fields, lr_fields, scale_indicators)
-    return _get_lr_scheduler(epoch_fields, lr_schedulers)
-
-
-# get scheduling setup.
-
-
-def get_scheduling_setup(args):
-    if args.lr_schedule_scheme == 'strict':
-        return _get_scheduling_setup_for_strict(args)
-    elif 'custom_one_cycle' == args.lr_schedule_scheme:
-        # NOTE: The scheme yet does not support multi-GPU training.
-        # No warmup and no linear scale are applied.
-        return _get_scheduling_setup_for_onecycle(args)
-    elif 'custom_multistep' == args.lr_schedule_scheme:
-        return _get_scheduling_setup_for_multistep(args)
-    elif 'custom_convex_decay' == args.lr_schedule_scheme:
-        return _get_scheduling_setup_for_convex_decay(args)
-    else:
-        raise NotImplementedError
-
-
-# build lr schedulers.
-
-
-def build_lr_schedulers(args, epoch_fields, lr_fields, scale_indicators):
-    lr_schedulers = dict()
-
-    for field_id, (epoch_field, lr_field, indicator) in \
-            enumerate(zip(epoch_fields, lr_fields, scale_indicators)):
-        lr_scheduler = _build_lr_scheduler(args, epoch_field, lr_field, indicator)
-        lr_schedulers[field_id] = lr_scheduler
-    return lr_schedulers
-
-
-def _build_lr_scheduler(args, epoch_field, lr_field, scale_indicator):
-    lr_left, lr_right = lr_field
-    epoch_left, epoch_right = epoch_field
-    n_steps = epoch_right - epoch_left
-
-    if scale_indicator == 'linear':
-        return _linear_scale(lr_left, lr_right, n_steps, epoch_left)
-    elif scale_indicator == 'poly':
-        return _poly_scale(lr_left, lr_right, n_steps, epoch_left)
-    elif scale_indicator == 'convex':
-        assert args.lr_gamma is not None
-        assert args.lr_mu is not None
-        assert args.lr_alpha is not None
-        return _convex_scale(args.lr_gamma, args.lr_mu, args.lr_alpha)
-    else:
-        raise NotImplementedError
-
-
-# get lr scheduler.
-
-
-def _get_lr_scheduler(epoch_fields, lr_schedulers):
-    def f(epoch_index):
-        def _is_fall_in(index, left_index, right_index):
-            return left_index <= index < right_index
-
-        for ind, (epoch_left, epoch_right) in enumerate(epoch_fields):
-            if _is_fall_in(epoch_index, epoch_left, epoch_right):
-                return lr_schedulers[ind](epoch_index)
-    return f
+        if scale_indicator == 'linear':
+            return _linear_scale(lr_left, lr_right, n_steps, epoch_left)
+        elif scale_indicator == 'poly':
+            return _poly_scale(lr_left, lr_right, n_steps, epoch_left)
+        elif scale_indicator == 'convex':
+            assert self.args.lr_gamma is not None
+            assert self.args.lr_mu is not None
+            assert self.args.lr_alpha is not None
+            return _convex_scale(
+                self.args.lr_gamma, self.args.lr_mu, self.args.lr_alpha)
+        else:
+            raise NotImplementedError
 
 
 """Define the scheduling step,
@@ -302,4 +333,3 @@ def _convex_scale(gamma, mu, alpha):
     def f(index):
         return gamma / (mu * (alpha + index))
     return f
-

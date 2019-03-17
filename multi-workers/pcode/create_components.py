@@ -18,9 +18,6 @@ def create_components(args):
     criterion = define_criterion(args)
     metrics = Metrics(model)
 
-    # define the lr scheduler.
-    scheduler = define_scheduler(args)
-
     # place model and criterion.
     if args.graph.on_cuda:
         model.cuda()
@@ -28,6 +25,9 @@ def create_components(args):
 
     # define the optimizer.
     optimizer = define_optimizer(args, model)
+
+    # define the lr scheduler.
+    scheduler = define_scheduler(args, optimizer)
 
     # (optional) reload checkpoint
     maybe_resume_from_checkpoint(args, model, optimizer)
