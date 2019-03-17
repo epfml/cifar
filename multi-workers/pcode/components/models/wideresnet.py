@@ -130,15 +130,15 @@ class WideResNet(nn.Module):
         return self.fc(out)
 
 
-def wideresnet(args):
-    net_depth = int(args.arch.replace('wideresnet', ''))
-    dataset = args.data
+def wideresnet(conf):
+    net_depth = int(conf.arch.replace('wideresnet', ''))
+    dataset = conf.data
 
-    if 'cifar' in args.data or 'svhn' in args.data:
+    if 'cifar' in conf.data or 'svhn' in conf.data:
         model = WideResNet(
             dataset=dataset, net_depth=net_depth,
-            widen_factor=args.wideresnet_widen_factor,
-            drop_rate=args.drop_rate)
+            widen_factor=conf.wideresnet_widen_factor,
+            drop_rate=conf.drop_rate)
         return model
     else:
         raise NotImplementedError

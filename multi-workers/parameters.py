@@ -4,7 +4,7 @@ from os.path import join
 import argparse
 
 import pcode.components.models as models
-from pcode.tracking.checkpoint import get_checkpoint_folder_name
+from pcode.utils.checkpoint import get_checkpoint_folder_name
 
 
 def get_args():
@@ -148,12 +148,12 @@ def get_args():
     parser.add_argument('--on_cuda', type=str2bool, default=True)
     parser.add_argument('--world', default=None, type=str)
 
-    # parse args.
-    args = parser.parse_args()
-    if args.timestamp is None:
-        args.timestamp = get_checkpoint_folder_name(args)
+    # parse conf.
+    conf = parser.parse_args()
+    if conf.timestamp is None:
+        conf.timestamp = get_checkpoint_folder_name(conf)
 
-    return args
+    return conf
 
 
 def str2bool(v):

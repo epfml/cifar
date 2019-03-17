@@ -28,7 +28,7 @@ class Adam(Optimizer):
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=0, amsgrad=False, args=None):
+                 weight_decay=0, amsgrad=False, conf=None):
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if not 0.0 <= eps:
@@ -42,12 +42,12 @@ class Adam(Optimizer):
         super(Adam, self).__init__(params, defaults)
 
         # store the whole training arguments.
-        self.args = args
+        self.conf = conf
 
         # define the aggregator.
         self.aggregator = get_aggregator_fn(
             aggregator_name='centralized',
-            rank=args.graph.rank, neighbors=args.graph.ranks)
+            rank=conf.graph.rank, neighbors=conf.graph.ranks)
 
     def __setstate__(self, state):
         super(Adam, self).__setstate__(state)
@@ -78,8 +78,8 @@ class Adam(Optimizer):
 
                 # aggregate the gradient.
                 self.aggregator._agg(
-                    grad, op='avg', 
-                    mpi_enabled=self.args.mpi_enabled
+                    grad, op='avg',
+                    mpi_enabled=self.conf.mpi_enabled
                 )
 
                 # State initialization for Adam.

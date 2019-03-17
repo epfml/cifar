@@ -51,30 +51,30 @@ class Logger:
         write_txt(value + "\n", self.file_txt, type="a")
 
 
-def display_args(args):
+def display_args(conf):
     print('parameters: ')
-    for arg in vars(args):
-        print(str(arg) + '\t' + str(getattr(args, arg)))
+    for arg in vars(conf):
+        print(str(arg) + '\t' + str(getattr(conf, arg)))
     for name in ['n_nodes', 'world', 'rank',
                  'ranks_with_blocks', 'blocks_with_ranks',
                  'device', 'on_cuda', 'get_neighborhood']:
-        print('{}: {}'.format(name, getattr(args.graph, name)))
+        print('{}: {}'.format(name, getattr(conf.graph, name)))
 
     print('experiment platform:')
     print(
         'Rank {} with block {} on {} {}-{}'.format(
-            args.graph.rank,
-            args.graph.ranks_with_blocks[args.graph.rank],
+            conf.graph.rank,
+            conf.graph.ranks_with_blocks[conf.graph.rank],
             platform.node(),
-            'GPU' if args.graph.on_cuda else 'CPU',
-            args.graph.device
+            'GPU' if conf.graph.on_cuda else 'CPU',
+            conf.graph.device
             )
         )
 
 
-def display_training_stat(args, scheduler, tracker):
+def display_training_stat(conf, scheduler, tracker):
     for name, stat in tracker.stat.items():
-        args.logger.log_metric(
+        conf.logger.log_metric(
             name=name,
             values={
                 'epoch': scheduler.epoch_,
@@ -83,19 +83,19 @@ def display_training_stat(args, scheduler, tracker):
         )
 
 
-def display_test_stat(args, scheduler, tracker, global_performance):
+def display_test_stat(conf, scheduler, tracker, global_performance):
     for name, perf in zip(tracker.metrics_to_track, global_performance):
-        args.logger.log_metric(
+        conf.logger.log_metric(
             name=name,
             values={
                 'epoch': scheduler.epoch_, 'value': perf},
             tags={'split': 'test'}
         )
-    args.logger.save_json()
+    conf.logger.save_json()
 
 
-def dispaly_best_test_stat(args, scheduler, best_tracker):
-    args.logger.log(
+def dispaly_best_test_stat(conf, scheduler, best_tracker):
+    conf.logger.log(
         'best performance at local index {} \
         (best epoch {:.3f}, current epoch {:.3f}): {}.'.format(
             scheduler.local_index, best_tracker.get_best_perf_loc(),

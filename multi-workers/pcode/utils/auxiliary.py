@@ -3,10 +3,10 @@ from copy import deepcopy
 from datetime import datetime
 
 
-def deepcopy_model(args, model):
+def deepcopy_model(conf, model):
     # a dirty hack....
     tmp_model = deepcopy(model)
-    if args.track_model_aggregation:
+    if conf.track_model_aggregation:
         for tmp_para, para in zip(tmp_model.parameters(), model.parameters()):
             tmp_para.grad = para.grad.clone()
     return tmp_model
@@ -23,11 +23,11 @@ def get_fullname(o):
 
 
 def is_float(value):
-  try:
-    float(value)
-    return True
-  except:
-    return False
+    try:
+        float(value)
+        return True
+    except:
+        return False
 
 
 class dict2obj(object):

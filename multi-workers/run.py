@@ -2,25 +2,24 @@
 import os
 
 import parameters as para
-from pcode.tools.db import init_mongo, announce_job_termination_to_mongo
 
 
-def main(args):
-    world_size = sum([int(l) for l in args.blocks.split(',')])
+def main(conf):
+    world_size = sum([int(l) for l in conf.blocks.split(',')])
 
     # build cmd.
-    if args.is_kube:
+    if conf.is_kube:
         prefix_cmd = 'mpirun -n {} --hostfile {} --prefix {} '
     else:
         prefix_cmd = 'mpirun -n {} --hostfile {} --mca btl_tcp_if_exclude docker0,lo --mca orte_base_help_aggregate 0 --prefix {} '
 
     # assign mpi environment.
     prefix_cmd = prefix_cmd . format(
-        world_size, args.hostfile, args.mpi_path)
+        world_size, conf.hostfile, conf.mpi_path)
 
     # build complete script.
-    cmd = '{} main.py '.format(args.python_path)
-    for k, v in args.__dict__.items():
+    cmd = '{} main.py '.format(conf.python_path)
+    for k, v in conf.__dict__.items():
         if v is not None:
             cmd += ' --{} {} '.format(k, v)
 

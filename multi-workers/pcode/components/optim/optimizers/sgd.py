@@ -52,7 +52,7 @@ class SGD(Optimizer):
     """
 
     def __init__(self, params, lr=required, momentum=0,
-                 dampening=0, weight_decay=0, nesterov=False, args=None):
+                 dampening=0, weight_decay=0, nesterov=False, conf=None):
         defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
         if nesterov and (momentum <= 0 or dampening != 0):
@@ -60,12 +60,12 @@ class SGD(Optimizer):
         super(SGD, self).__init__(params, defaults)
 
         # store the whole training arguments.
-        self.args = args
+        self.conf = conf
 
         # define the aggregator.
         self.aggregator = get_aggregator_fn(
             aggregator_name='centralized',
-            rank=args.graph.rank, neighbors=args.graph.ranks)
+            rank=conf.graph.rank, neighbors=conf.graph.ranks)
 
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
@@ -103,8 +103,8 @@ class SGD(Optimizer):
 
                 # aggregate the gradient.
                 self.aggregator._agg(
-                    d_p, op='avg', 
-                    mpi_enabled=self.args.mpi_enabled
+                    d_p, op='avg',
+                    mpi_enabled=self.conf.mpi_enabled
                 )
 
                 # add weight decay.

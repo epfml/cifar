@@ -52,7 +52,7 @@ class MLP(nn.Module):
         return out
 
 
-def mlp(args):
+def mlp(conf):
     return MLP(
-        dataset=args.data, num_layers=args.mlp_num_layers,
-        hidden_size=args.mlp_hidden_size, drop_rate=args.drop_rate)
+        dataset=conf.data, num_layers=conf.mlp_num_layers,
+        hidden_size=conf.mlp_hidden_size, drop_rate=conf.drop_rate)

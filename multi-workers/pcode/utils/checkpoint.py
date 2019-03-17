@@ -9,32 +9,32 @@ import torch
 from pcode.utils.op_paths import build_dirs
 
 
-def get_checkpoint_folder_name(args):
+def get_checkpoint_folder_name(conf):
     # return datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
     time_id = str(int(time.time()))
     time_id += '_l2-{}_lr-{}_epochs-{}_batchsize-{}_blocksize_{}_optim-{}'.format(
-        args.weight_decay,
-        args.lr,
-        args.num_epochs,
-        args.batch_size,
-        args.blocks,
-        args.optimizer
+        conf.weight_decay,
+        conf.lr,
+        conf.num_epochs,
+        conf.batch_size,
+        conf.blocks,
+        conf.optimizer
     )
     return time_id
 
 
-def init_checkpoint(args):
+def init_checkpoint(conf):
     # init checkpoint dir.
-    args.checkpoint_root = join(
-        args.checkpoint, args.data, args.arch,
-        args.experiment if args.experiment is not None else '',
-        args.timestamp)
-    args.checkpoint_dir = join(args.checkpoint_root, str(args.graph.rank))
-    if args.save_some_models is not None:
-        args.save_some_models = args.save_some_models.split(',')
+    conf.checkpoint_root = join(
+        conf.checkpoint, conf.data, conf.arch,
+        conf.experiment if conf.experiment is not None else '',
+        conf.timestamp)
+    conf.checkpoint_dir = join(conf.checkpoint_root, str(conf.graph.rank))
+    if conf.save_some_models is not None:
+        conf.save_some_models = conf.save_some_models.split(',')
 
     # if the directory does not exists, create them.
-    build_dirs(args.checkpoint_dir)
+    build_dirs(conf.checkpoint_dir)
 
 
 def _save_to_checkpoint(state, dirname, filename):
@@ -45,7 +45,7 @@ def _save_to_checkpoint(state, dirname, filename):
 
 def save_to_checkpoint(state, is_best, dirname, filename, save_all=False):
     # save full state.
-    args = state['arguments']
+    conf = state['arguments']
     checkpoint_path = _save_to_checkpoint(state, dirname, filename)
     best_model_path = join(dirname, 'model_best.pth.tar')
     if is_best:
@@ -54,66 +54,54 @@ def save_to_checkpoint(state, is_best, dirname, filename, save_all=False):
         shutil.copyfile(checkpoint_path, join(
             dirname,
             'checkpoint_epoch_%s.pth.tar' % state['current_epoch']))
-    elif args.save_some_models is not None:
-        if str(state['current_epoch']) in args.save_some_models:
+    elif conf.save_some_models is not None:
+        if str(state['current_epoch']) in conf.save_some_models:
             shutil.copyfile(checkpoint_path, join(
                 dirname,
                 'checkpoint_epoch_%s.pth.tar' % state['current_epoch'])
             )
 
 
-def check_resume_status(args, old_args):
-    signal = (args.data == old_args.data) and \
-        (args.batch_size == old_args.batch_size) and \
-        (args.num_epochs >= old_args.num_epochs)
-    print('the status of previous resume: {}'.format(signal))
-    return signal
-
-
-def maybe_resume_from_checkpoint(args, model, optimizer):
-    if args.resume:
-        if args.checkpoint_index is not None:
+def maybe_resume_from_checkpoint(conf, model, optimizer):
+    if conf.resume:
+        if conf.checkpoint_index is not None:
             # reload model from a specific checkpoint index.
-            checkpoint_index = '_epoch_' + args.checkpoint_index
+            checkpoint_index = '_epoch_' + conf.checkpoint_index
         else:
             # reload model from the latest checkpoint.
             checkpoint_index = ''
         checkpoint_path = join(
-            args.resume, 'checkpoint{}.pth.tar'.format(checkpoint_index))
+            conf.resume, 'checkpoint{}.pth.tar'.format(checkpoint_index))
         print('try to load previous model from the path:{}'.format(
               checkpoint_path))
 
         if isfile(checkpoint_path):
             print("=> loading checkpoint {} for {}".format(
-                args.resume, args.graph.rank))
+                conf.resume, conf.graph.rank))
 
             # get checkpoint.
             checkpoint = torch.load(checkpoint_path, map_location='cpu')
 
-            if not check_resume_status(args, checkpoint['arguments']):
-                print('=> the checkpoint is not correct. skip.')
-            else:
-                # restore some run-time info.
-                args.local_index = checkpoint['local_index']
-                args.best_prec1 = checkpoint['best_prec1']
-                args.best_epoch = checkpoint['arguments'].best_epoch
+            # restore some run-time info.
+            conf.local_index = checkpoint['local_index']
+            conf.best_perf = checkpoint['best_perf']
 
-                # reset path for log.
-                # remove_folder(args.checkpoint_root)
-                args.checkpoint_root = args.resume
-                args.checkpoint_dir = join(args.resume, str(args.graph.rank))
-                # restore model.
-                model.load_state_dict(checkpoint['state_dict'])
-                # restore optimizer.
-                optimizer.load_state_dict(checkpoint['optimizer'])
-                # logging.
-                print("=> loaded model from path '{}' checkpointed at (epoch {})"
-                      .format(args.resume, checkpoint['current_epoch']))
+            # reset path for log.
+            # remove_folder(conf.checkpoint_root)
+            conf.checkpoint_root = conf.resume
+            conf.checkpoint_dir = join(conf.resume, str(conf.graph.rank))
+            # restore model.
+            model.load_state_dict(checkpoint['state_dict'])
+            # restore optimizer.
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            # logging.
+            print("=> loaded model from path '{}' checkpointed at (epoch {})"
+                  . format(conf.resume, checkpoint['current_epoch']))
 
-                # try to solve memory issue.
-                del checkpoint
-                torch.cuda.empty_cache()
-                gc.collect()
-                return
+            # try to solve memory issue.
+            del checkpoint
+            torch.cuda.empty_cache()
+            gc.collect()
+            return
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no checkpoint found at '{}'".format(conf.resume))

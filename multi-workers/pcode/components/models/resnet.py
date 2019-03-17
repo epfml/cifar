@@ -137,7 +137,7 @@ class ResNetBase(nn.Module):
         layers.append(block_fn(self.inplanes, planes, stride, downsample))
         self.inplanes = planes * block_fn.expansion
 
-        for i in range(1, block_num):
+        for _ in range(1, block_num):
             layers.append(block_fn(self.inplanes, planes))
         return nn.Sequential(*layers)
 
@@ -257,15 +257,15 @@ class ResNet_cifar(ResNetBase):
         return x
 
 
-def resnet(args):
+def resnet(conf):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    resnet_size = int(args.arch.replace('resnet', ''))
-    dataset = args.data
+    resnet_size = int(conf.arch.replace('resnet', ''))
+    dataset = conf.data
 
-    if 'cifar' in args.data or 'svhn' in args.data:
+    if 'cifar' in conf.data or 'svhn' in conf.data:
         model = ResNet_cifar(dataset=dataset, resnet_size=resnet_size)
     elif 'imagenet' in dataset:
         model = ResNet_imagenet(dataset=dataset, resnet_size=resnet_size)

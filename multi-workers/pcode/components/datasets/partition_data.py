@@ -20,23 +20,11 @@ class Partition(object):
         return self.data[data_idx]
 
 
-class Partitioner(object):
-    def consistent_indices(self, indices, shuffle):
-        if self.args.graph.rank == 0 and shuffle:
-            random.shuffle(indices)
-
-        # broadcast.
-        indices = torch.IntTensor(indices)
-        group = dist.new_group(self.args.graph.ranks)
-        dist.broadcast(indices, src=0, group=group)
-        return list(indices)
-
-
-class DataPartitioner(Partitioner):
+class DataPartitioner(object):
     """ Partitions a dataset into different chuncks. """
-    def __init__(self, args, data, shuffle, sizes=[0.7, 0.2, 0.1]):
+    def __init__(self, conf, data, shuffle, sizes=[0.7, 0.2, 0.1]):
         # prepare info.
-        self.args = args
+        self.conf = conf
         self.data = data
         self.data_size = len(self.data)
         self.partitions = []
@@ -47,10 +35,20 @@ class DataPartitioner(Partitioner):
 
         # partition indices.
         from_index = 0
-        for ind, frac in enumerate(sizes):
+        for ind, _ in enumerate(sizes):
             to_index = from_index + int(sizes[ind] * self.data_size)
             self.partitions.append(indices[from_index: to_index])
             from_index = to_index
 
     def use(self, partition_ind):
         return Partition(self.data, self.partitions[partition_ind])
+
+    def consistent_indices(self, indices, shuffle):
+        if self.conf.graph.rank == 0 and shuffle:
+            random.shuffle(indices)
+
+        # broadcast.
+        indices = torch.IntTensor(indices)
+        group = dist.new_group(self.conf.graph.ranks)
+        dist.broadcast(indices, src=0, group=group)
+        return list(indices)

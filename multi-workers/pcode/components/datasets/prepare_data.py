@@ -82,24 +82,24 @@ def _get_svhn(root, split, transform, target_transform, download):
                               download=download)
 
 
-def _get_imagenet(args, name, datasets_path, split):
+def _get_imagenet(conf, name, datasets_path, split):
     is_train = (split == 'train')
     root = os.path.join(
         datasets_path,
         'lmdb' if 'downsampled' not in name else 'lmdb_32x32'
-        ) if args.use_lmdb_data else datasets_path
+        ) if conf.use_lmdb_data else datasets_path
 
     if is_train:
         root = os.path.join(root, 'train{}'.format(
-            '' if not args.use_lmdb_data else '.lmdb')
+            '' if not conf.use_lmdb_data else '.lmdb')
         )
     else:
         root = os.path.join(root, 'val{}'.format(
-            '' if not args.use_lmdb_data else '.lmdb')
+            '' if not conf.use_lmdb_data else '.lmdb')
         )
     return define_imagenet_folder(
-        name=name, root=root, flag=args.use_lmdb_data,
-        cuda=args.graph.on_cuda)
+        name=name, root=root, flag=conf.use_lmdb_data,
+        cuda=conf.graph.on_cuda)
 
 
 def _get_epsilon_or_rcv1(root, name, split):
@@ -108,7 +108,7 @@ def _get_epsilon_or_rcv1(root, name, split):
 
 
 def get_dataset(
-        args, name, datasets_path, split='train', transform=None,
+        conf, name, datasets_path, split='train', transform=None,
         target_transform=None, download=True):
     # create data folder if it does not exist.
     root = os.path.join(datasets_path, name)
@@ -123,7 +123,7 @@ def get_dataset(
     elif name == 'stl10':
         return _get_stl10(root, split, transform, target_transform, download)
     elif 'imagenet' in name:
-        return _get_imagenet(args, name, datasets_path, split)
+        return _get_imagenet(conf, name, datasets_path, split)
     elif name == 'epsilon':
         return _get_epsilon_or_rcv1(root, name, split)
     elif name == 'rcv1':

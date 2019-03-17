@@ -10,45 +10,45 @@ from pcode.utils.topology import FCGraph
 from pcode.utils.logging import Logger, display_args
 
 
-def main(args):
+def main(conf):
     try:
         dist.init_process_group('mpi')
-        args.mpi_enabled = True
+        conf.mpi_enabled = True
     except AttributeError as e:
-        args.mpi_enabled = False
+        conf.mpi_enabled = False
 
     # init the config.
-    init_config(args)
+    init_config(conf)
 
     # create model and deploy the model.
-    model, criterion, scheduler, optimizer, metrics = create_components(args)
+    model, criterion, scheduler, optimizer, metrics = create_components(conf)
 
     # train amd evaluate model.
-    train_and_validate(args, model, criterion, scheduler, optimizer, metrics)
+    train_and_validate(conf, model, criterion, scheduler, optimizer, metrics)
 
 
-def init_config(args):
+def init_config(conf):
     # define the graph for the computation.
-    cur_rank = dist.get_rank() if args.mpi_enabled else 0
-    args.graph = FCGraph(cur_rank, args.blocks, args.on_cuda, args.world)
+    cur_rank = dist.get_rank() if conf.mpi_enabled else 0
+    conf.graph = FCGraph(cur_rank, conf.blocks, conf.on_cuda, conf.world)
 
-    if args.graph.on_cuda:
+    if conf.graph.on_cuda:
         assert torch.cuda.is_available()
-        torch.cuda.manual_seed(args.manual_seed)
-        torch.cuda.set_device(args.graph.device)
+        torch.cuda.manual_seed(conf.manual_seed)
+        torch.cuda.set_device(conf.graph.device)
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = True
 
     # define checkpoint for logging.
-    init_checkpoint(args)
+    init_checkpoint(conf)
 
     # configure logger.
-    args.logger = Logger(args.checkpoint_dir)
+    conf.logger = Logger(conf.checkpoint_dir)
 
     # display the arguments' info.
-    display_args(args)
+    display_args(conf)
 
 
 if __name__ == '__main__':
-    args = get_args()
-    main(args)
+    conf = get_args()
+    main(conf)

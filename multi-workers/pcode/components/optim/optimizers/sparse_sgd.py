@@ -23,7 +23,7 @@ class SparseSGD(Optimizer):
                  dampening=0,
                  weight_decay=0,
                  momentum=0,
-                 args=None):
+                 conf=None):
 
         if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
@@ -33,22 +33,22 @@ class SparseSGD(Optimizer):
 
         defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum, dampening=dampening)
 
-        self.world_size = len(args.graph.ranks)
-        self.sparsification_scheme = args.sparsification_scheme
-        self.communication_scheme = args.communication_scheme
-        self.num_coordinates = args.num_coordinates
+        self.world_size = len(conf.graph.ranks)
+        self.sparsification_scheme = conf.sparsification_scheme
+        self.communication_scheme = conf.communication_scheme
+        self.num_coordinates = conf.num_coordinates
 
         super(SparseSGD, self).__init__(params, defaults)
 
         self.__create_gradients_memory()
 
         # store the whole training arguments.
-        self.args = args
+        self.conf = conf
 
         # define the aggregator.
         self.aggregator = get_aggregator_fn(
             aggregator_name='centralized',
-            rank=args.graph.rank, neighbors=args.graph.ranks)
+            rank=conf.graph.rank, neighbors=conf.graph.ranks)
 
         if self.communication_scheme == "all_reduce":
             self.rng = np.random.RandomState(100)
@@ -164,13 +164,13 @@ class SparseSGD(Optimizer):
 
             gradients_list = self.aggregator._agg(
                 sparse_tensor, op='avg',
-                mpi_enabled=self.args.mpi_enabled,
+                mpi_enabled=self.conf.mpi_enabled,
                 communication_scheme="all_gather"
             )
 
             indices_list = self.aggregator._agg(
                 indices, op='avg',
-                mpi_enabled=self.args.mpi_enabled,
+                mpi_enabled=self.conf.mpi_enabled,
                 communication_scheme="all_gather"
             )
 
@@ -181,7 +181,7 @@ class SparseSGD(Optimizer):
         elif self.communication_scheme == "all_reduce":
             self.aggregator._agg(
                 sparse_tensor, op='avg',
-                mpi_enabled=self.args.mpi_enabled,
+                mpi_enabled=self.conf.mpi_enabled,
                 communication_scheme="all_reduce"
             )
 

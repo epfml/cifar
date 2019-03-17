@@ -178,7 +178,7 @@ class DenseNet(nn.Module):
             self, num_channels, growth_rate, num_layers_per_block,
             bc_mode, drop_rate):
         layers = []
-        for i in range(int(num_layers_per_block)):
+        for _ in range(int(num_layers_per_block)):
             if bc_mode:
                 layers.append(
                     Bottleneck(num_channels, growth_rate, drop_rate))
@@ -197,12 +197,12 @@ class DenseNet(nn.Module):
         return out
 
 
-def densenet(args):
-    net_depth = int(args.arch.replace('densenet', ''))
+def densenet(conf):
+    net_depth = int(conf.arch.replace('densenet', ''))
 
     model = DenseNet(
-        dataset=args.data, net_depth=net_depth,
-        growth_rate=args.densenet_growth_rate, bc_mode=args.densenet_bc_mode,
-        compression=args.densenet_compression,
-        drop_rate=args.drop_rate)
+        dataset=conf.data, net_depth=net_depth,
+        growth_rate=conf.densenet_growth_rate, bc_mode=conf.densenet_bc_mode,
+        compression=conf.densenet_compression,
+        drop_rate=conf.drop_rate)
     return model

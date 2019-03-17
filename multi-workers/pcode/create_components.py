@@ -8,34 +8,34 @@ from pcode.components.create_scheduler import LRScheduler
 from pcode.utils.checkpoint import maybe_resume_from_checkpoint
 
 
-def create_components(args):
+def create_components(conf):
     """Create model, criterion and optimizer.
-    If args.use_cuda is True, use ps_id as GPU_id.
+    If conf.use_cuda is True, use ps_id as GPU_id.
     """
-    model = define_model(args)
+    model = define_model(conf)
 
     # define the criterion and metrics.
-    criterion = define_criterion(args)
+    criterion = define_criterion(conf)
     metrics = Metrics(model)
 
     # place model and criterion.
-    if args.graph.on_cuda:
+    if conf.graph.on_cuda:
         model.cuda()
         criterion = criterion.cuda()
 
     # define the optimizer.
-    optimizer = define_optimizer(args, model)
-
-    # define the lr scheduler.
-    scheduler = LRScheduler(args, optimizer)
+    optimizer = define_optimizer(conf, model)
 
     # (optional) reload checkpoint
-    maybe_resume_from_checkpoint(args, model, optimizer)
+    maybe_resume_from_checkpoint(conf, model, optimizer)
+
+    # define the lr scheduler.
+    scheduler = LRScheduler(conf, optimizer)
     return model, criterion, scheduler, optimizer, metrics
 
 
-def define_criterion(args):
-    if 'least_square' in args.arch:
+def define_criterion(conf):
+    if 'least_square' in conf.arch:
         criterion = nn.MSELoss(reduction='mean')
     else:
         criterion = nn.CrossEntropyLoss(reduction='mean')
