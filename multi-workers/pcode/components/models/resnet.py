@@ -259,8 +259,6 @@ class ResNet_cifar(ResNetBase):
 
 def resnet(conf):
     """Constructs a ResNet-18 model.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     resnet_size = int(conf.arch.replace('resnet', ''))
     dataset = conf.data

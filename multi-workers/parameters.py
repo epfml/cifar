@@ -11,7 +11,6 @@ def get_args():
     ROOT_DIRECTORY = './'
     RAW_DATA_DIRECTORY = join(ROOT_DIRECTORY, 'data/')
     TRAINING_DIRECTORY = join(RAW_DATA_DIRECTORY, 'checkpoint')
-    LOG_DIRECTORY = './logging'
 
     model_names = sorted(
         name for name in models.__dict__
@@ -110,38 +109,26 @@ def get_args():
     parser.add_argument('--timestamp', default=None, type=str)
 
     # checkpoint
-    parser.add_argument('--debug', type=str2bool, default=False)
     parser.add_argument('--resume', default=None, type=str)
-    parser.add_argument('--check_model_at_sync', default=False, type=str2bool)
-    parser.add_argument('--track_model_aggregation', default=False, type=str2bool)
     parser.add_argument('--checkpoint', '-c', default=TRAINING_DIRECTORY,
                         type=str,
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--checkpoint_index', type=str, default=None)
     parser.add_argument('--save_all_models', type=str2bool, default=False)
     parser.add_argument('--save_some_models', type=str, default=None)
-    parser.add_argument('--log_dir', default=LOG_DIRECTORY)
-    parser.add_argument('--plot_dir', default=None,
-                        type=str, help='path to plot the result')
-    parser.add_argument('--pretrained', dest='pretrained', type=str2bool,
-                        default=False, help='use pre-trained model')
 
     """meta info."""
     parser.add_argument('--user', type=str, default='lin')
     parser.add_argument('--project', type=str,
                         default='distributed_adam_type_algorithm')
     parser.add_argument('--experiment', type=str, default=None)
-    parser.add_argument('--use_db', type=str2bool, default=False)
 
     # device
     parser.add_argument('--hostfile', type=str, default='hostfile')
     parser.add_argument('--mpi_path', type=str, default='$HOME/.openmpi')
-    parser.add_argument('--is_kube', type=str2bool, default=True)
     parser.add_argument('--python_path', type=str, default='$HOME/conda/envs/pytorch-py3.6/bin/python')
     parser.add_argument('-j', '--num_workers', default=4, type=int,
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--dist_backend', default='gloo', type=str,
-                        help='distributed backend')
 
     parser.add_argument('--blocks', default='1', type=str,
                         help='number of blocks (divide processes to blocks)')
