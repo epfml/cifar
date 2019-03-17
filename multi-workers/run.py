@@ -46,7 +46,7 @@ def build_cmd(conf, replacement=None):
 
 def generate_combinations(params):
     names = sorted(params)
-    combinations = itertools.product(*(params[Name] for Name in names))
+    combinations = itertools.product(*(params[name] for name in names))
     return names, list(combinations)
 
 
