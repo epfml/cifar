@@ -86,7 +86,7 @@ class RuntimeTracker(object):
             (name, AverageMeter()) for name in self.things_to_track)
 
     def evaluate_global_metric(self, metric):
-        return global_average(self.stat[metric].sum, self.stat[metric].count)
+        return global_average(self.stat[metric].sum, self.stat[metric].count).items()
 
     def evaluate_global_metrics(self):
         return [self.evaluate_global_metric(metric) for metric in self.metrics_to_track]

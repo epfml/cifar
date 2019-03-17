@@ -89,7 +89,7 @@ def do_validate(
 
     # save to the checkpoint.
     if conf.graph.rank == 0:
-        save_to_checkpoint({
+        save_to_checkpoint(conf, {
             'arch': conf.arch,
             'current_epoch': scheduler.epoch,
             'local_index': scheduler.local_index,

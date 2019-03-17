@@ -20,7 +20,9 @@ class LRScheduler(object):
         It contains an entry for every variable in self.__dict__ which
         is not the optimizer.
         """
-        return {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
+        return {
+            key: value for key, value in self.__dict__.items()
+            if key != 'optimizer' and key != 'scheduler'}
 
     def load_state_dict(self, state_dict):
         """Loads the schedulers state.

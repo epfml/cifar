@@ -43,9 +43,9 @@ def _save_to_checkpoint(state, dirname, filename):
     return checkpoint_path
 
 
-def save_to_checkpoint(state, is_best, dirname, filename, save_all=False):
+def save_to_checkpoint(
+        conf, state, is_best, dirname, filename, save_all=False):
     # save full state.
-    conf = state['arguments']
     checkpoint_path = _save_to_checkpoint(state, dirname, filename)
     best_model_path = join(dirname, 'model_best.pth.tar')
     if is_best:

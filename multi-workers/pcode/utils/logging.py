@@ -85,12 +85,14 @@ def display_training_stat(conf, scheduler, tracker):
 
 
 def display_test_stat(conf, scheduler, tracker, global_performance):
+    cur_time = time.strftime("%Y-%m-%d %H:%M:%S")
+
     for name, perf in zip(tracker.metrics_to_track, global_performance):
         conf.logger.log_metric(
             name=name,
             values={
                 'epoch': scheduler.epoch_,
-                'time': time.strftime("%Y-%m-%d %H:%M:%S"),
+                'time': cur_time,
                 'value': perf},
             tags={'split': 'test'}
         )
