@@ -39,6 +39,9 @@ def train_and_validate(conf, model, criterion, scheduler, optimizer, metrics):
             loss.backward()
             optimizer.step()
 
+            # display the logging info.
+            display_training_stat(conf, scheduler, tracker_tr)
+
             # finish one epoch training and to decide if we want to val our model.
             if scheduler.epoch_ % 1 == 0:
                 # each worker finish one epoch training.
@@ -53,15 +56,11 @@ def train_and_validate(conf, model, criterion, scheduler, optimizer, metrics):
                 if scheduler.is_stop():
                     return
 
-            # display the logging info.
-            display_training_stat(conf, scheduler, tracker_tr)
-
         # reshuffle the data.
         if conf.reshuffle_per_epoch:
-            print('reshuffle the dataset.')
+            print('\nReshuffle the dataset.')
             del train_loader, val_loader
             gc.collect()
-            print('reshuffle the dataset.')
             train_loader, val_loader = define_dataset(conf, shuffle=True)
 
 
