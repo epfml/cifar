@@ -1,6 +1,6 @@
 python main.py \
     --arch resnet20 --optimizer adam \
-    --avg_model True --experiment Adam_large_batch_training_baseline_without_lr_decay  \
+    --avg_model True --experiment debug  \
     --data cifar10 --pin_memory True \
     --batch_size 128 --base_batch_size 64 --num_workers 2 --eval_freq 1 \
     --num_epochs 300 --partition_data True --reshuffle_per_epoch True --stop_criteria epoch \

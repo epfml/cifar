@@ -7,6 +7,7 @@ from os.path import join, isfile
 import torch
 
 from pcode.utils.op_paths import build_dirs
+from pcode.utils.op_files import write_pickle
 
 
 def get_checkpoint_folder_name(conf):
@@ -35,6 +36,10 @@ def init_checkpoint(conf):
 
     # if the directory does not exists, create them.
     build_dirs(conf.checkpoint_dir)
+
+    # save the configure file to the checkpoint.
+    if conf.graph.rank == 0:
+        write_pickle(conf, path=join(conf.checkpoint_root, 'arguments.pickle'))
 
 
 def _save_to_checkpoint(state, dirname, filename):
