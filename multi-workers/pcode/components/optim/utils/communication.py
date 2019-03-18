@@ -81,7 +81,7 @@ class CentralizedAggregation(Aggregation):
         super(CentralizedAggregation, self).__init__(rank, neighbors)
         assert rank in neighbors
 
-    def _agg(self, data, op, mpi_enabled=True, communication_scheme='all_reduce'):
+    def _agg(self, data, op=None, mpi_enabled=True, communication_scheme='all_reduce'):
         """Aggregate data using `op` operation.
         Args:
             data (:obj:`torch.Tensor`): A Tensor to be aggragated.
@@ -102,9 +102,7 @@ class CentralizedAggregation(Aggregation):
                 raise NotImplementedError
 
             return data
-
         elif communication_scheme == "all_gather":
-
             gathered_list = [torch.zeros_like(data) for _ in range(int(self.world_size))]
             dist.all_gather(gathered_list, data)
 

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer, required
+
 from pcode.components.optim.utils.communication import get_aggregator_fn
-import numpy as np
 
 
 class SparseSGD(Optimizer):
@@ -92,7 +93,8 @@ class SparseSGD(Optimizer):
         num_coordinates = self._sparse_vector_size(full_size)
 
         if num_coordinates < full_size:
-            selected_indices = torch.tensor(self.rng.choice(full_size, num_coordinates, replace=False))
+            selected_indices = torch.tensor(
+                self.rng.choice(full_size, num_coordinates, replace=False))
         else:
             selected_indices = torch.tensor(np.arange(full_size))
 
@@ -115,25 +117,21 @@ class SparseSGD(Optimizer):
 
     def step(self, closure=None):
         """ Sparsifies/Quantize gradients, aggregates the gradients, and performs a single optimization step.
-                Arguments:
-                    closure (callable, optional): A closure that reevaluates the model
-                        and returns the loss.
-                """
-
+        Arguments:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
         for group in self.param_groups:
-
             lr = group['lr']
             weight_decay = group['weight_decay']
             momentum = group['momentum']
 
             for i, p in enumerate(group['params']):
-
                 if weight_decay != 0:
                     p.grad.data.add_(weight_decay, p.data)
 
                 # Make the gradients sparse
                 sparse_tensor, indices = self.sparsify_gradients(p, lr)
-
                 # Aggregate the gradients
                 self._aggregate_sparsified_gradients(p, sparse_tensor, indices)
 
@@ -141,6 +139,7 @@ class SparseSGD(Optimizer):
                     continue
                 d_p = p.grad.data
 
+                # apply the momentum.
                 if momentum != 0:
                     param_state = self.state[p]
                     if 'momentum_buffer' not in param_state:
@@ -150,34 +149,31 @@ class SparseSGD(Optimizer):
                         buf = param_state['momentum_buffer']
                         buf = momentum * buf + d_p
                     d_p = buf
-
                 p.data.add_(-d_p)
 
     def _aggregate_sparsified_gradients(self, param, sparse_tensor, indices):
 
         """ Aggregates the sparsified/quantized gradients """
-
         param.grad.data = torch.zeros_like(param.grad.data)
         dv = param.grad.data.view(-1)
 
         if self.communication_scheme == "all_gather":
-
+            # gather gradients and indices
             gradients_list = self.aggregator._agg(
-                sparse_tensor, op='avg',
+                sparse_tensor,
                 mpi_enabled=self.conf.mpi_enabled,
                 communication_scheme="all_gather"
             )
-
             indices_list = self.aggregator._agg(
-                indices, op='avg',
+                indices,
                 mpi_enabled=self.conf.mpi_enabled,
                 communication_scheme="all_gather"
             )
 
-            for grad_tensor, indices_tensor in zip(gradients_list, indices_list):
-                dv[indices_tensor] += grad_tensor
+            # re-organize the gathered information.
+            for grad, indices in zip(gradients_list, indices_list):
+                dv[indices] += grad
             dv /= self.world_size
-
         elif self.communication_scheme == "all_reduce":
             self.aggregator._agg(
                 sparse_tensor, op='avg',
