@@ -58,15 +58,13 @@ def display_args(conf):
     for arg in vars(conf):
         print('\t' + str(arg) + '\t' + str(getattr(conf, arg)))
 
-    print('\n\nexperiment platform: rank {} with block {} on {} {}-{}'.format(
+    print('\n\nexperiment platform: rank {} on {} {}-{}'.format(
             conf.graph.rank,
-            conf.graph.ranks_with_blocks[conf.graph.rank],
             platform.node(),
             'GPU' if conf.graph.on_cuda else 'CPU',
             conf.graph.device
             ))
     for name in ['n_nodes', 'world', 'rank',
-                 'ranks_with_blocks', 'blocks_with_ranks',
                  'device', 'on_cuda', 'get_neighborhood']:
         print('\t{}: {}'.format(name, getattr(conf.graph, name)))
     print('\n\n')

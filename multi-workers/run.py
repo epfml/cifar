@@ -18,11 +18,10 @@ def single_run(conf):
 
 def build_cmd(conf, replacement=None):
     # get the world size.
-    if replacement is not None and 'blocks' in replacement[0]:
-        blocks = replacement[1][replacement[0].index('blocks')]
+    if replacement is not None and 'n_nodes' in replacement[0]:
+        world_size = replacement[1][replacement[0].index('n_nodes')]
     else:
-        blocks = conf.blocks
-    world_size = sum([int(l) for l in blocks.split(',')])
+        world_size = conf.n_nodes
 
     # get prefix_cmd.
     if world_size > 1:
@@ -55,7 +54,7 @@ def multi_run(conf):
     # please refer parameters.py to use the correct name and datatype!
     params = {
         'world': ['0,0,0,0'],
-        'blocks': ['1', '2', '3', '4'],
+        'n_nodes': [1, 2, 3, 4],
     }
     names, combinations = generate_combinations(params)
 

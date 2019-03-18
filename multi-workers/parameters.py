@@ -130,8 +130,7 @@ def get_args():
     parser.add_argument('-j', '--num_workers', default=4, type=int,
                         help='number of data loading workers (default: 4)')
 
-    parser.add_argument('--blocks', default='1', type=str,
-                        help='number of blocks (divide processes to blocks)')
+    parser.add_argument('--n_nodes', default=1, type=int)
     parser.add_argument('--on_cuda', type=str2bool, default=True)
     parser.add_argument('--world', default=None, type=str)
 

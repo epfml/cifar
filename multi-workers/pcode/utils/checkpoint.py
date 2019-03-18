@@ -12,12 +12,12 @@ from pcode.utils.op_paths import build_dirs
 def get_checkpoint_folder_name(conf):
     # return datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
     time_id = str(int(time.time()))
-    time_id += '_l2-{}_lr-{}_epochs-{}_batchsize-{}_blocksize_{}_optim-{}'.format(
+    time_id += '_l2-{}_lr-{}_epochs-{}_batchsize-{}_num_nodes_{}_optim-{}'.format(
         conf.weight_decay,
         conf.lr,
         conf.num_epochs,
         conf.batch_size,
-        conf.blocks,
+        conf.n_nodes,
         conf.optimizer
     )
     return time_id

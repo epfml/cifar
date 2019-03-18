@@ -6,7 +6,7 @@ from parameters import get_args
 from pcode.create_components import create_components
 from pcode.distributed_running import train_and_validate
 from pcode.utils.checkpoint import init_checkpoint
-from pcode.utils.topology import FCGraph
+from pcode.utils.topology import define_graph_topology
 from pcode.utils.logging import Logger, display_args
 
 
@@ -30,7 +30,10 @@ def main(conf):
 def init_config(conf):
     # define the graph for the computation.
     cur_rank = dist.get_rank() if conf.mpi_enabled else 0
-    conf.graph = FCGraph(cur_rank, conf.blocks, conf.on_cuda, conf.world)
+    conf.graph = define_graph_topology(
+        rank=cur_rank, n_nodes=conf.n_nodes,
+        on_cuda=conf.on_cuda, world=conf.world,
+        graph_topology='complete')
 
     if conf.graph.on_cuda:
         assert torch.cuda.is_available()
