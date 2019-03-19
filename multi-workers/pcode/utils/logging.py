@@ -21,7 +21,7 @@ class Logger:
         self.file_txt = os.path.join(file_folder, 'log.txt')
         self.values = []
 
-    def log_metric(self, name, values, tags):
+    def log_metric(self, name, values, tags, display=False):
         """
         Store a scalar metric
 
@@ -34,8 +34,10 @@ class Logger:
             **values,
             **tags,
         })
-        print("{name}: {values} ({tags})".format(
-            name=name, values=values, tags=tags))
+
+        if display:
+            print("{name}: {values} ({tags})".format(
+                name=name, values=values, tags=tags))
 
     def log(self, value):
         content = time.strftime("%Y-%m-%d %H:%M:%S") + "\t" + value

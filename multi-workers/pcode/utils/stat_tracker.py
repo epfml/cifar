@@ -95,6 +95,9 @@ class RuntimeTracker(object):
         for idx, thing in enumerate(self.things_to_track):
             self.stat[thing].update(metric_stat[idx], n_samples)
 
+    def __call__(self):
+        return dict((name, val.avg) for name, val in self.stat.items())
+
 
 class BestPerf(object):
     def __init__(self, best_perf=None):
