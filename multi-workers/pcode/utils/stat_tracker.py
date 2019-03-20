@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import torch
 
-from pcode.components.optim.utils.communication import global_average
+from pcode.utils.communication import global_average
 
 
 class MaxMeter(object):

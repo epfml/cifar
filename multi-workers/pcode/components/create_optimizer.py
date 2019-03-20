@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from pcode.components.optim.optimizers.sgd import SGD
-from pcode.components.optim.optimizers.adam import Adam
-from pcode.components.optim.optimizers.sparse_sgd import SparseSGD
+from pcode.components.optim.sgd import SGD
+from pcode.components.optim.adam import Adam
+from pcode.components.optim.sparse_sgd import SparseSGD
 
 
 def define_optimizer(conf, model):

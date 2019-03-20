@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer, required
 
-from pcode.components.optim.utils.communication import get_aggregator_fn
+from pcode.utils.communication import get_aggregator_fn
 
 
 class SparseSGD(Optimizer):

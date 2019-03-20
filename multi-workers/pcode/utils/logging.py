@@ -21,7 +21,7 @@ class Logger:
         self.file_txt = os.path.join(file_folder, 'log.txt')
         self.values = []
 
-    def log_metric(self, name, values, tags, display=False):
+    def log_metric(self, name, values, tags, display=True):
         """
         Store a scalar metric
 
