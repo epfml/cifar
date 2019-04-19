@@ -8,27 +8,10 @@ import torch
 import torchvision
 
 import models
-import utils.accumulators
-
-config = dict(
-    dataset='Cifar10',
-    model='resnet18',
-    optimizer='SGD',
-    optimizer_decay_at_epochs=[150, 250],
-    optimizer_decay_with_factor=10.0,
-    optimizer_learning_rate=0.1,
-    optimizer_momentum=0.9,
-    optimizer_weight_decay=0.0001,
-    batch_size=256,
-    num_epochs=300,
-    seed=42,
-)
+import cifar_utils.accumulators
 
 
-output_dir = './output.tmp' # Can be overwritten by a script calling this
-
-
-def main():
+def main(config, output_dir, gpu_id):
     """
     Train a model
     You can either call this script directly (using the default parameters),
@@ -39,19 +22,19 @@ def main():
     # Set the seed
     torch.manual_seed(config['seed'])
     np.random.seed(config['seed'])
-
+    torch.cuda.set_device(gpu_id)
     # We will run on CUDA if there is a GPU available
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda:{}'.format(str(gpu_id)) if torch.cuda.is_available() else 'cpu')
 
     # Configure the dataset, model and the optimizer based on the global
     # `config` dictionary.
-    training_loader, test_loader = get_dataset()
-    model = get_model(device)
-    optimizer, scheduler = get_optimizer(model.parameters())
+    training_loader, test_loader = get_dataset(config)
+    model = get_model(config, gpu_id)
+    optimizer, scheduler = get_optimizer(config, model.parameters())
     criterion = torch.nn.CrossEntropyLoss()
 
     # We keep track of the best accuracy so far to store checkpoints
-    best_accuracy_so_far = utils.accumulators.Max()
+    best_accuracy_so_far = cifar_utils.accumulators.Max()
 
     for epoch in range(config['num_epochs']):
         print('Epoch {:03d}'.format(epoch))
@@ -60,14 +43,14 @@ def main():
         model.train()
 
         # Keep track of statistics during training
-        mean_train_accuracy = utils.accumulators.Mean()
-        mean_train_loss = utils.accumulators.Mean()
+        mean_train_accuracy = cifar_utils.accumulators.Mean()
+        mean_train_loss = cifar_utils.accumulators.Mean()
 
         # Update the optimizer's learning rate
         scheduler.step(epoch)
 
         for batch_x, batch_y in training_loader:
-            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+            batch_x, batch_y = batch_x.cuda(gpu_id), batch_y.cuda(gpu_id)
 
             # Compute gradients for the batch
             optimizer.zero_grad()
@@ -76,7 +59,7 @@ def main():
             acc = accuracy(prediction, batch_y)
             loss.backward()
 
-            # Do an optimizer step
+            # Do an optimizer steps
             optimizer.step()
 
             # Store the statistics
@@ -97,10 +80,10 @@ def main():
 
         # Evaluation
         model.eval()
-        mean_test_accuracy = utils.accumulators.Mean()
-        mean_test_loss = utils.accumulators.Mean()
+        mean_test_accuracy = cifar_utils.accumulators.Mean()
+        mean_test_loss = cifar_utils.accumulators.Mean()
         for batch_x, batch_y in test_loader:
-            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+            batch_x, batch_y = batch_x.cuda(gpu_id), batch_y.cuda(gpu_id)
             prediction = model(batch_x)
             loss = criterion(prediction, batch_y)
             acc = accuracy(prediction, batch_y)
@@ -122,10 +105,10 @@ def main():
         # Store checkpoints for the best model so far
         is_best_so_far = best_accuracy_so_far.add(mean_test_accuracy.value())
         if is_best_so_far:
-            store_checkpoint("best.checkpoint", model, epoch, mean_test_accuracy.value())
+            store_checkpoint(output_dir, "best.checkpoint", model, epoch, mean_test_accuracy.value())
 
     # Store a final checkpoint
-    store_checkpoint("final.checkpoint", model, config['num_epochs'] - 1, mean_test_accuracy.value())
+    store_checkpoint(output_dir, "final.checkpoint", model, config['num_epochs'] - 1, mean_test_accuracy.value())
 
     # Return the optimal accuracy, could be used for learning rate tuning
     return best_accuracy_so_far.value()
@@ -147,7 +130,7 @@ def log_metric(name, values, tags):
     print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
-def get_dataset(test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data'):
+def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data'):
     """
     Create dataset loaders for the chosen dataset
     :return: Tuple (training_loader, test_loader)
@@ -193,7 +176,7 @@ def get_dataset(test_batch_size=100, shuffle_train=True, num_workers=2, data_roo
     return training_loader, test_loader
 
 
-def get_optimizer(model_parameters):
+def get_optimizer(config, model_parameters):
     """
     Create an optimizer for a given model
     :param model_parameters: a list of parameters to be trained
@@ -218,7 +201,7 @@ def get_optimizer(model_parameters):
     return optimizer, scheduler
 
 
-def get_model(device):
+def get_model(config, device):
     """
     :param device: instance of torch.device
     :return: An instance of torch.nn.Module
@@ -241,7 +224,8 @@ def get_model(device):
         'resnet152': lambda: models.ResNet152(num_classes=num_classes),
     }[config['model']]()
 
-    model.to(device)
+    # model.to(device)
+    model = model.cuda(device)
     if device == 'cuda':
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
@@ -249,7 +233,7 @@ def get_model(device):
     return model
 
 
-def store_checkpoint(filename, model, epoch, test_accuracy):
+def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
     """Store a checkpoint file to the output directory"""
     path = os.path.join(output_dir, filename)
 
@@ -267,4 +251,21 @@ def store_checkpoint(filename, model, epoch, test_accuracy):
 
 
 if __name__ == '__main__':
-    main()
+    config = dict(
+        dataset='Cifar10',
+        model='resnet18',
+        optimizer='SGD',
+        optimizer_decay_at_epochs=[150, 250],
+        optimizer_decay_with_factor=10.0,
+        optimizer_learning_rate=0.1,
+        optimizer_momentum=0.9,
+        optimizer_weight_decay=0.0001,
+        batch_size=256,
+        num_epochs=300,
+        seed=42,
+    )
+
+    output_dir = './output.tmp'  # Can be overwritten by a script calling this
+    gpu_id = 0
+
+    main(config, output_dir, gpu_id)
