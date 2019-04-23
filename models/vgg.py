@@ -12,11 +12,13 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, num_classes=10, batch_norm=True):
+    def __init__(self, vgg_name, num_classes=10, batch_norm=True, bias=True):
         super(VGG, self).__init__()
         self.batch_norm= batch_norm
+        self.bias = bias
         self.features = self._make_layers(cfg[vgg_name])
-        self.classifier = nn.Linear(512, num_classes)
+        self.classifier = nn.Linear(512, num_classes, bias=self.bias)
+
 
     def forward(self, x):
         out = self.features(x)
@@ -32,11 +34,11 @@ class VGG(nn.Module):
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
             else:
                 if self.batch_norm:
-                    layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                    layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1, bias=self.bias),
                            nn.BatchNorm2d(x),
                            nn.ReLU(inplace=True)]
                 else:
-                    layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                    layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1, bias=self.bias),
                            nn.ReLU(inplace=True)]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]

@@ -209,6 +209,7 @@ def get_model(config, device):
     num_classes = 100 if config['dataset'] == 'Cifar100' else 10
 
     model = {
+        'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False),
         'vgg11':     lambda: models.VGG('VGG11', num_classes, batch_norm=False),
         'vgg11_bn':  lambda: models.VGG('VGG11', num_classes, batch_norm=True),
         'vgg13':     lambda: models.VGG('VGG13', num_classes, batch_norm=False),
@@ -226,6 +227,7 @@ def get_model(config, device):
 
     # model.to(device)
     model = model.cuda(device)
+    print("model parameters are \n", list([param.shape for param in model.parameters()]))
     if device == 'cuda':
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
