@@ -10,7 +10,6 @@ import torchvision
 import models
 import cifar_utils.accumulators
 
-
 def main(config, output_dir, gpu_id):
     """
     Train a model
@@ -201,7 +200,7 @@ def get_optimizer(config, model_parameters):
     return optimizer, scheduler
 
 
-def get_model(config, device):
+def get_model(config, device=-1):
     """
     :param device: instance of torch.device
     :return: An instance of torch.nn.Module
@@ -225,15 +224,40 @@ def get_model(config, device):
         'resnet152': lambda: models.ResNet152(num_classes=num_classes),
     }[config['model']]()
 
-    # model.to(device)
-    model = model.cuda(device)
-    print("model parameters are \n", list([param.shape for param in model.parameters()]))
-    if device == 'cuda':
-        model = torch.nn.DataParallel(model)
-        torch.backends.cudnn.benchmark = True
+    if device != -1:
+        # model.to(device)
+        model = model.cuda(device)
+        print("model parameters are \n", list([param.shape for param in model.parameters()]))
+        if device == 'cuda':
+            model = torch.nn.DataParallel(model)
+            torch.backends.cudnn.benchmark = True
 
     return model
 
+
+def get_pretrained_model(config, path, device_id=-1):
+
+    model = get_model(config, device_id)
+
+    if device_id != -1:
+        state = torch.load(
+            path,
+            map_location=(
+                lambda s, _: torch.serialization.default_restore_location(s, 'cuda:' + str(device_id))
+            ),
+        )
+    else:
+        state = torch.load(
+            path,
+            map_location=(
+                lambda s, _: torch.serialization.default_restore_location(s, 'cpu')
+            ),
+        )
+
+    print("Loading model at path {} which had accuracy {}".format(path, state['test_accuracy']))
+    model.load_state_dict(state['model_state_dict'])
+
+    return model
 
 def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
     """Store a checkpoint file to the output directory"""
