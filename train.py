@@ -10,7 +10,7 @@ import torchvision
 import models
 import cifar_utils.accumulators
 
-def main(config, output_dir, gpu_id):
+def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None):
     """
     Train a model
     You can either call this script directly (using the default parameters),
@@ -27,14 +27,23 @@ def main(config, output_dir, gpu_id):
 
     # Configure the dataset, model and the optimizer based on the global
     # `config` dictionary.
-    training_loader, test_loader = get_dataset(config)
-    model = get_model(config, gpu_id)
+    if pretrained_dataset is not None:
+        training_loader, test_loader = pretrained_dataset
+    else:
+        training_loader, test_loader = get_dataset(config)
+
+    if pretrained_model is not None:
+        model = pretrained_model
+    else:
+        model = get_model(config, gpu_id)
+
     optimizer, scheduler = get_optimizer(config, model.parameters())
     criterion = torch.nn.CrossEntropyLoss()
 
     # We keep track of the best accuracy so far to store checkpoints
     best_accuracy_so_far = cifar_utils.accumulators.Max()
 
+    print("number of epochs would be ", config['num_epochs'])
     for epoch in range(config['num_epochs']):
         print('Epoch {:03d}'.format(epoch))
 
@@ -129,7 +138,7 @@ def log_metric(name, values, tags):
     print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
-def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data'):
+def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data', unit_batch_train=False):
     """
     Create dataset loaders for the chosen dataset
     :return: Tuple (training_loader, test_loader)
@@ -159,9 +168,14 @@ def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, 
     training_set = dataset(root=data_root, train=True, download=True, transform=transform_train)
     test_set = dataset(root=data_root, train=False, download=True, transform=transform_test)
 
+    if unit_batch_train:
+        train_batch_size = 1
+    else:
+        train_batch_size = config['batch_size']
+
     training_loader = torch.utils.data.DataLoader(
         training_set,
-        batch_size=config['batch_size'],
+        batch_size=train_batch_size,
         shuffle=shuffle_train,
         num_workers=num_workers
     )
@@ -257,8 +271,18 @@ def get_pretrained_model(config, path, device_id=-1):
     print("Loading model at path {} which had accuracy {}".format(path, state['test_accuracy']))
     model.load_state_dict(state['model_state_dict'])
 
-    return model
+    return model, state['test_accuracy']
 
+def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir):
+    # update the parameters
+    config['num_epochs'] = args.retrain
+    if args.retrain_init_lr > 0:
+        config['optimizer_learning_rate'] = config['optimizer_learning_rate'] / args.retrain_lr_decay
+
+    # retrain
+    best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network, pretrained_dataset=(train_loader, test_loader))
+    # currently I don' return the best model, as it checkpointed
+    return None, best_acc
 def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
     """Store a checkpoint file to the output directory"""
     path = os.path.join(output_dir, filename)
