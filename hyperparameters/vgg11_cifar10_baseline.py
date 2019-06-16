@@ -9,7 +9,7 @@ config = dict(
     optimizer_momentum=0.9,
     optimizer_weight_decay=0.0005,
     batch_size=128,
-    num_epochs=2,
+    num_epochs=300,
     seed=42,
 )
 

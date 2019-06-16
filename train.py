@@ -276,9 +276,10 @@ def get_pretrained_model(config, path, device_id=-1):
 def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir):
     # update the parameters
     config['num_epochs'] = args.retrain
-    if args.retrain_init_lr > 0:
-        config['optimizer_learning_rate'] = config['optimizer_learning_rate'] / args.retrain_lr_decay
+    if args.retrain_lr_decay > 0:
 
+        config['optimizer_learning_rate'] = args.cifar_init_lr / args.retrain_lr_decay
+        print('optimizer_learning_rate is ', config['optimizer_learning_rate'])
     # retrain
     best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network, pretrained_dataset=(train_loader, test_loader))
     # currently I don' return the best model, as it checkpointed
