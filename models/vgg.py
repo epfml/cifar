@@ -12,13 +12,13 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, num_classes=10, batch_norm=True, bias=True):
+    def __init__(self, vgg_name, num_classes=10, batch_norm=True, bias=True, relu_inplace=True):
         super(VGG, self).__init__()
         self.batch_norm= batch_norm
         self.bias = bias
-        self.features = self._make_layers(cfg[vgg_name])
+        self.features = self._make_layers(cfg[vgg_name], relu_inplace=relu_inplace)
         self.classifier = nn.Linear(512, num_classes, bias=self.bias)
-
+        print("Relu Inplace is ", relu_inplace)
 
     def forward(self, x):
         out = self.features(x)
@@ -26,7 +26,7 @@ class VGG(nn.Module):
         out = self.classifier(out)
         return out
 
-    def _make_layers(self, cfg):
+    def _make_layers(self, cfg, relu_inplace=True):
         layers = []
         in_channels = 3
         for x in cfg:
@@ -36,12 +36,13 @@ class VGG(nn.Module):
                 if self.batch_norm:
                     layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1, bias=self.bias),
                            nn.BatchNorm2d(x),
-                           nn.ReLU(inplace=True)]
+                           nn.ReLU(inplace=relu_inplace)]
                 else:
                     layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1, bias=self.bias),
-                           nn.ReLU(inplace=True)]
+                           nn.ReLU(inplace=relu_inplace)]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
+        print("in _make_layers", list(layers))
         return nn.Sequential(*layers)
 
 
