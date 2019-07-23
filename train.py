@@ -268,10 +268,9 @@ def get_pretrained_model(config, path, device_id=-1):
             ),
         )
 
-    print("Loading model at path {} which had accuracy {}".format(path, state['test_accuracy']))
+    print("Loading model at path {} which had accuracy {} and at epoch {}".format(path, state['test_accuracy'], state['epoch']))
     model.load_state_dict(state['model_state_dict'])
-
-    return model, state['test_accuracy']
+    return model, state['test_accuracy']*100
 
 def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir):
     # update the parameters
