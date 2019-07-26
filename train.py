@@ -10,7 +10,7 @@ import torchvision
 import models
 import cifar_utils.accumulators
 
-def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None):
+def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None, tensorboard_obj=None):
     """
     Train a model
     You can either call this script directly (using the default parameters),
@@ -39,6 +39,12 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
 
     optimizer, scheduler = get_optimizer(config, model.parameters())
     criterion = torch.nn.CrossEntropyLoss()
+
+    if tensorboard_obj is not None and config['start_acc']!=-1:
+        assert config['nick'] != ''
+        tensorboard_obj.add_scalars('test_accuracy_percent/', {config['nick']: config['start_acc']},
+                                    global_step=0)
+
 
     # We keep track of the best accuracy so far to store checkpoints
     best_accuracy_so_far = cifar_utils.accumulators.Max()
@@ -109,6 +115,13 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
             {'epoch': epoch, 'value': mean_test_loss.value()},
             {'split': 'test'}
         )
+        # Tensorboard
+        if tensorboard_obj is not None:
+            assert config['nick'] != ''
+            tensorboard_obj.add_scalars('train_loss/', {config['nick']: mean_train_loss.value()}, global_step=(epoch + 1))
+            tensorboard_obj.add_scalars('train_accuracy_percent/', {config['nick']: mean_train_accuracy.value()*100}, global_step=(epoch + 1))
+            tensorboard_obj.add_scalars('test_loss/', {config['nick']: mean_test_loss.value()}, global_step=(epoch + 1))
+            tensorboard_obj.add_scalars('test_accuracy_percent/', {config['nick']: mean_test_accuracy.value()*100}, global_step=(epoch + 1))
 
         # Store checkpoints for the best model so far
         is_best_so_far = best_accuracy_so_far.add(mean_test_accuracy.value())
@@ -272,15 +285,19 @@ def get_pretrained_model(config, path, device_id=-1, relu_inplace=True):
     model.load_state_dict(state['model_state_dict'])
     return model, state['test_accuracy']*100
 
-def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir):
+def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir, tensorboard_obj=None, nick='', start_acc=-1):
     # update the parameters
     config['num_epochs'] = args.retrain
-    if args.retrain_lr_decay > 0:
+    if nick == 'geometric':
+        nick += '_' + str(args.activation_seed)
+    config['nick'] = nick
+    config['start_acc'] = start_acc
 
+    if args.retrain_lr_decay > 0:
         config['optimizer_learning_rate'] = args.cifar_init_lr / args.retrain_lr_decay
         print('optimizer_learning_rate is ', config['optimizer_learning_rate'])
     # retrain
-    best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network, pretrained_dataset=(train_loader, test_loader))
+    best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network, pretrained_dataset=(train_loader, test_loader), tensorboard_obj=tensorboard_obj)
     # currently I don' return the best model, as it checkpointed
     return None, best_acc
 def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
