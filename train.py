@@ -158,13 +158,16 @@ def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, 
     """
     if config['dataset'] == 'Cifar10':
         dataset = torchvision.datasets.CIFAR10
+        data_mean = (0.4914, 0.4822, 0.4465)
+        data_stddev = (0.2023, 0.1994, 0.2010)
     elif config['dataset'] == 'Cifar100':
         dataset = torchvision.datasets.CIFAR100
+        data_mean = (0.5071, 0.4867, 0.4408)
+        data_stddev = (0.2675, 0.2565, 0.2761)
+        # numbers taken from https://gist.github.com/weiaicunzai/e623931921efefd4c331622c344d8151
     else:
         raise ValueError('Unexpected value for config[dataset] {}'.format(config['dataset']))
 
-    data_mean = (0.4914, 0.4822, 0.4465)
-    data_stddev = (0.2023, 0.1994, 0.2010)
 
     transform_train = torchvision.transforms.Compose([
         torchvision.transforms.RandomCrop(32, padding=4),
@@ -236,6 +239,14 @@ def get_model(config, device=-1, relu_inplace=True):
 
     model = {
         'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False, relu_inplace=relu_inplace),
+        'vgg11_half_nobias': lambda: models.VGG('VGG11_half', num_classes, batch_norm=False, bias=False,
+                                           relu_inplace=relu_inplace),
+        'vgg11_doub_nobias': lambda: models.VGG('VGG11_doub', num_classes, batch_norm=False, bias=False,
+                                           relu_inplace=relu_inplace),
+        'vgg11_quad_nobias': lambda: models.VGG('VGG11_quad', num_classes, batch_norm=False, bias=False,
+                                           relu_inplace=relu_inplace),
+        'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False,
+                                           relu_inplace=relu_inplace),
         'vgg11':     lambda: models.VGG('VGG11', num_classes, batch_norm=False, relu_inplace=relu_inplace),
         'vgg11_bn':  lambda: models.VGG('VGG11', num_classes, batch_norm=True, relu_inplace=relu_inplace),
         'vgg13':     lambda: models.VGG('VGG13', num_classes, batch_norm=False, relu_inplace=relu_inplace),
@@ -285,7 +296,8 @@ def get_pretrained_model(config, path, device_id=-1, relu_inplace=True):
     model.load_state_dict(state['model_state_dict'])
     return model, state['test_accuracy']*100
 
-def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir, tensorboard_obj=None, nick='', start_acc=-1):
+def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir, tensorboard_obj=None, nick='', start_acc=-1, retrain_seed=-1):
+    
     # update the parameters
     config['num_epochs'] = args.retrain
     if nick == 'geometric':
