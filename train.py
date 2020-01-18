@@ -168,7 +168,8 @@ def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, 
     else:
         raise ValueError('Unexpected value for config[dataset] {}'.format(config['dataset']))
 
-
+    # TODO: I guess the randomness at random transforms is at play!
+    # TODO: I think in retrain if I fix this, then the issue should be resolved
     transform_train = torchvision.transforms.Compose([
         torchvision.transforms.RandomCrop(32, padding=4),
         torchvision.transforms.RandomHorizontalFlip(),
@@ -244,8 +245,6 @@ def get_model(config, device=-1, relu_inplace=True):
         'vgg11_doub_nobias': lambda: models.VGG('VGG11_doub', num_classes, batch_norm=False, bias=False,
                                            relu_inplace=relu_inplace),
         'vgg11_quad_nobias': lambda: models.VGG('VGG11_quad', num_classes, batch_norm=False, bias=False,
-                                           relu_inplace=relu_inplace),
-        'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False,
                                            relu_inplace=relu_inplace),
         'vgg11':     lambda: models.VGG('VGG11', num_classes, batch_norm=False, relu_inplace=relu_inplace),
         'vgg11_bn':  lambda: models.VGG('VGG11', num_classes, batch_norm=True, relu_inplace=relu_inplace),
