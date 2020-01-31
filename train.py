@@ -151,7 +151,7 @@ def log_metric(name, values, tags):
     print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
-def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data', unit_batch_train=False):
+def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data', unit_batch_train=False, no_randomness=False):
     """
     Create dataset loaders for the chosen dataset
     :return: Tuple (training_loader, test_loader)
@@ -170,12 +170,20 @@ def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, 
 
     # TODO: I guess the randomness at random transforms is at play!
     # TODO: I think in retrain if I fix this, then the issue should be resolved
-    transform_train = torchvision.transforms.Compose([
-        torchvision.transforms.RandomCrop(32, padding=4),
-        torchvision.transforms.RandomHorizontalFlip(),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(data_mean, data_stddev),
-    ])
+    if no_randomness:
+        transform_train = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(data_mean, data_stddev),
+        ])
+        shuffle_train = False
+        print('disabling shuffle train as well in no_randomness!')
+    else:
+        transform_train = torchvision.transforms.Compose([
+            torchvision.transforms.RandomCrop(32, padding=4),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(data_mean, data_stddev),
+        ])
 
     transform_test = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -307,6 +315,15 @@ def get_retrained_model(args, train_loader, test_loader, old_network, config, ou
     if args.retrain_lr_decay > 0:
         config['optimizer_learning_rate'] = args.cifar_init_lr / args.retrain_lr_decay
         print('optimizer_learning_rate is ', config['optimizer_learning_rate'])
+
+    if args.retrain_lr_decay_factor is not None:
+        config['optimizer_decay_with_factor'] = args.retrain_lr_decay_factor
+        print('optimizer lr decay factor is ', config['optimizer_decay_with_factor'])
+
+    if args.retrain_lr_decay_epochs is not None:
+        config['optimizer_decay_at_epochs'] = [int(ep) for ep in args.retrain_lr_decay_epochs.split('_')]
+        print('optimizer lr decay epochs is ', config['optimizer_decay_at_epochs'])
+
     # retrain
     best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network, pretrained_dataset=(train_loader, test_loader), tensorboard_obj=tensorboard_obj)
     # currently I don' return the best model, as it checkpointed
