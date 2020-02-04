@@ -263,6 +263,8 @@ def get_model(config, device=-1, relu_inplace=True):
         'vgg19':     lambda: models.VGG('VGG19', num_classes, batch_norm=False, relu_inplace=relu_inplace),
         'vgg19_bn':  lambda: models.VGG('VGG19', num_classes, batch_norm=True, relu_inplace=relu_inplace),
         'resnet18':  lambda: models.ResNet18(num_classes=num_classes),
+        'resnet18_nobias': lambda: models.ResNet18(num_classes=num_classes, linear_bias=False),
+        'resnet18_nobias_nobn': lambda: models.ResNet18(num_classes=num_classes, use_batchnorm=False, linear_bias=False),
         'resnet34':  lambda: models.ResNet34(num_classes=num_classes),
         'resnet50':  lambda: models.ResNet50(num_classes=num_classes),
         'resnet101': lambda: models.ResNet101(num_classes=num_classes),
