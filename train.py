@@ -10,7 +10,7 @@ import torchvision
 import models
 import cifar_utils.accumulators
 
-def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None, tensorboard_obj=None):
+def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None, tensorboard_obj=None, return_model=False):
     """
     Train a model
     You can either call this script directly (using the default parameters),
@@ -132,7 +132,10 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
     store_checkpoint(output_dir, "final.checkpoint", model, config['num_epochs'] - 1, mean_test_accuracy.value())
 
     # Return the optimal accuracy, could be used for learning rate tuning
-    return best_accuracy_so_far.value()
+    if return_model:
+        return best_accuracy_so_far.value(), model
+    else:
+        return best_accuracy_so_far.value()
 
 
 def accuracy(predicted_logits, reference):
@@ -220,6 +223,7 @@ def get_optimizer(config, model_parameters):
     :param model_parameters: a list of parameters to be trained
     :return: Tuple (optimizer, scheduler)
     """
+    print('lr is ', config['optimizer_learning_rate'])
     if config['optimizer'] == 'SGD':
         optimizer = torch.optim.SGD(
             model_parameters,
