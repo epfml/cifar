@@ -154,22 +154,27 @@ def log_metric(name, values, tags):
     print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
-def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data', unit_batch_train=False, no_randomness=False):
+def get_dataset(config, args, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data', unit_batch_train=False, no_randomness=False):
     """
     Create dataset loaders for the chosen dataset
     :return: Tuple (training_loader, test_loader)
     """
-    if config['dataset'] == 'Cifar10':
+    if config is not None:
+        dataset_name = config['dataset'].lower()
+    else:
+        dataset_name = args.dataset.lower()
+
+    if dataset_name == 'cifar10':
         dataset = torchvision.datasets.CIFAR10
         data_mean = (0.4914, 0.4822, 0.4465)
         data_stddev = (0.2023, 0.1994, 0.2010)
-    elif config['dataset'] == 'Cifar100':
+    elif dataset_name == 'cifar100':
         dataset = torchvision.datasets.CIFAR100
         data_mean = (0.5071, 0.4867, 0.4408)
         data_stddev = (0.2675, 0.2565, 0.2761)
         # numbers taken from https://gist.github.com/weiaicunzai/e623931921efefd4c331622c344d8151
     else:
-        raise ValueError('Unexpected value for config[dataset] {}'.format(config['dataset']))
+        raise ValueError('Unexpected value for config[dataset] {}'.format(dataset_name))
 
     # TODO: I guess the randomness at random transforms is at play!
     # TODO: I think in retrain if I fix this, then the issue should be resolved
@@ -199,7 +204,14 @@ def get_dataset(config, test_batch_size=100, shuffle_train=True, num_workers=2, 
     if unit_batch_train:
         train_batch_size = 1
     else:
-        train_batch_size = config['batch_size']
+        if config:
+            train_batch_size = config['batch_size']
+        else:
+            if args.model_name[0:5] == 'pyres':
+                print("The model is from pytorch resnet, setting train bsz to 128")
+                train_batch_size = 128
+            else:
+                train_batch_size = args.batch_size_train
 
     training_loader = torch.utils.data.DataLoader(
         training_set,

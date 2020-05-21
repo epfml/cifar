@@ -13,10 +13,19 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
+class LambdaLayer(nn.Module):
+    def __init__(self, lambd):
+        super(LambdaLayer, self).__init__()
+        self.lambd = lambd
+
+    def forward(self, x):
+        return self.lambd(x)
+
+
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1, use_batchnorm=True):
+    def __init__(self, in_planes, planes, stride=1, use_batchnorm=True, option='B'):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -28,10 +37,18 @@ class BasicBlock(nn.Module):
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion*planes) if use_batchnorm else nn.Sequential()
-            )
+            if option == 'A':
+                # added from pytorch-resnet repo!
+                """
+                For CIFAR10 ResNet paper uses option A.
+                """
+                self.shortcut = LambdaLayer(lambda x:
+                                            F.pad(x[:, :, ::2, ::2], (0, 0, 0, 0, planes//4, planes//4), "constant", 0))
+            elif option == 'B':
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                    nn.BatchNorm2d(self.expansion*planes) if use_batchnorm else nn.Sequential()
+                )
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
@@ -73,10 +90,11 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10, use_batchnorm=True, linear_bias=True):
+    def __init__(self, block, num_blocks, num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
         super(ResNet, self).__init__()
         self.in_planes = 64
         self.use_batchnorm = use_batchnorm
+        self.option = option
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64) if use_batchnorm else nn.Sequential()
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
@@ -89,7 +107,7 @@ class ResNet(nn.Module):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_planes, planes, stride, self.use_batchnorm))
+            layers.append(block(self.in_planes, planes, stride, self.use_batchnorm, self.option))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
@@ -105,20 +123,23 @@ class ResNet(nn.Module):
         return out
 
 
-def ResNet18(num_classes=10, use_batchnorm=True, linear_bias=True):
-    return ResNet(BasicBlock, [2,2,2,2], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias)
+def ResNet18(num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
+    return ResNet(BasicBlock, [2,2,2,2], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias, option=option)
 
-def ResNet34(num_classes=10, use_batchnorm=True, linear_bias=True):
-    return ResNet(BasicBlock, [3,4,6,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias)
+def ResNet20(num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
+    return ResNet(BasicBlock, [3, 3, 3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias, option=option)
 
-def ResNet50(num_classes=10, use_batchnorm=True, linear_bias=True):
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias)
+def ResNet34(num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
+    return ResNet(BasicBlock, [3,4,6,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias, option=option)
 
-def ResNet101(num_classes=10, use_batchnorm=True, linear_bias=True):
-    return ResNet(Bottleneck, [3,4,23,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias)
+def ResNet50(num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
+    return ResNet(Bottleneck, [3,4,6,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias, option=option)
 
-def ResNet152(num_classes=10, use_batchnorm=True, linear_bias=True):
-    return ResNet(Bottleneck, [3,8,36,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias)
+def ResNet101(num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
+    return ResNet(Bottleneck, [3,4,23,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias, option=option)
+
+def ResNet152(num_classes=10, use_batchnorm=True, linear_bias=True, option='B'):
+    return ResNet(Bottleneck, [3,8,36,3], num_classes=num_classes, use_batchnorm=use_batchnorm, linear_bias=linear_bias, option=option)
 
 
 def test():
