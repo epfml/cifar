@@ -10,7 +10,9 @@ import torchvision
 import models
 import cifar_utils.accumulators
 
-def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None, tensorboard_obj=None, return_model=False):
+
+def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None, tensorboard_obj=None,
+         return_model=False):
     """
     Train a model
     You can either call this script directly (using the default parameters),
@@ -30,7 +32,7 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
     if pretrained_dataset is not None:
         training_loader, test_loader = pretrained_dataset
     else:
-        training_loader, test_loader = get_dataset(config)
+        training_loader, test_loader = get_dataset(config, args=None)
 
     if pretrained_model is not None:
         model = pretrained_model
@@ -40,11 +42,10 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
     optimizer, scheduler = get_optimizer(config, model.parameters())
     criterion = torch.nn.CrossEntropyLoss()
 
-    if tensorboard_obj is not None and config['start_acc']!=-1:
+    if tensorboard_obj is not None and config['start_acc'] != -1:
         assert config['nick'] != ''
         tensorboard_obj.add_scalars('test_accuracy_percent/', {config['nick']: config['start_acc']},
                                     global_step=0)
-
 
     # We keep track of the best accuracy so far to store checkpoints
     best_accuracy_so_far = cifar_utils.accumulators.Max()
@@ -118,10 +119,13 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
         # Tensorboard
         if tensorboard_obj is not None:
             assert config['nick'] != ''
-            tensorboard_obj.add_scalars('train_loss/', {config['nick']: mean_train_loss.value()}, global_step=(epoch + 1))
-            tensorboard_obj.add_scalars('train_accuracy_percent/', {config['nick']: mean_train_accuracy.value()*100}, global_step=(epoch + 1))
+            tensorboard_obj.add_scalars('train_loss/', {config['nick']: mean_train_loss.value()},
+                                        global_step=(epoch + 1))
+            tensorboard_obj.add_scalars('train_accuracy_percent/', {config['nick']: mean_train_accuracy.value() * 100},
+                                        global_step=(epoch + 1))
             tensorboard_obj.add_scalars('test_loss/', {config['nick']: mean_test_loss.value()}, global_step=(epoch + 1))
-            tensorboard_obj.add_scalars('test_accuracy_percent/', {config['nick']: mean_test_accuracy.value()*100}, global_step=(epoch + 1))
+            tensorboard_obj.add_scalars('test_accuracy_percent/', {config['nick']: mean_test_accuracy.value() * 100},
+                                        global_step=(epoch + 1))
 
         # Store checkpoints for the best model so far
         is_best_so_far = best_accuracy_so_far.add(mean_test_accuracy.value())
@@ -154,7 +158,8 @@ def log_metric(name, values, tags):
     print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
-def get_dataset(config, args, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data', unit_batch_train=False, no_randomness=False):
+def get_dataset(config, args, test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data',
+                unit_batch_train=False, no_randomness=False):
     """
     Create dataset loaders for the chosen dataset
     :return: Tuple (training_loader, test_loader)
@@ -249,7 +254,7 @@ def get_optimizer(config, model_parameters):
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
         milestones=config['optimizer_decay_at_epochs'],
-        gamma=1.0/config['optimizer_decay_with_factor'],
+        gamma=1.0 / config['optimizer_decay_with_factor'],
     )
 
     return optimizer, scheduler
@@ -263,26 +268,32 @@ def get_model(config, device=-1, relu_inplace=True):
     num_classes = 100 if config['dataset'] == 'Cifar100' else 10
 
     model = {
-        'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False, relu_inplace=relu_inplace),
+        'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False,
+                                           relu_inplace=relu_inplace),
         'vgg11_half_nobias': lambda: models.VGG('VGG11_half', num_classes, batch_norm=False, bias=False,
-                                           relu_inplace=relu_inplace),
+                                                relu_inplace=relu_inplace),
         'vgg11_doub_nobias': lambda: models.VGG('VGG11_doub', num_classes, batch_norm=False, bias=False,
-                                           relu_inplace=relu_inplace),
+                                                relu_inplace=relu_inplace),
         'vgg11_quad_nobias': lambda: models.VGG('VGG11_quad', num_classes, batch_norm=False, bias=False,
-                                           relu_inplace=relu_inplace),
-        'vgg11':     lambda: models.VGG('VGG11', num_classes, batch_norm=False, relu_inplace=relu_inplace),
-        'vgg11_bn':  lambda: models.VGG('VGG11', num_classes, batch_norm=True, relu_inplace=relu_inplace),
-        'vgg13':     lambda: models.VGG('VGG13', num_classes, batch_norm=False, relu_inplace=relu_inplace),
-        'vgg13_bn':  lambda: models.VGG('VGG13', num_classes, batch_norm=True, relu_inplace=relu_inplace),
-        'vgg16':     lambda: models.VGG('VGG16', num_classes, batch_norm=False, relu_inplace=relu_inplace),
-        'vgg16_bn':  lambda: models.VGG('VGG16', num_classes, batch_norm=True, relu_inplace=relu_inplace),
-        'vgg19':     lambda: models.VGG('VGG19', num_classes, batch_norm=False, relu_inplace=relu_inplace),
-        'vgg19_bn':  lambda: models.VGG('VGG19', num_classes, batch_norm=True, relu_inplace=relu_inplace),
-        'resnet18':  lambda: models.ResNet18(num_classes=num_classes),
+                                                relu_inplace=relu_inplace),
+        'vgg11': lambda: models.VGG('VGG11', num_classes, batch_norm=False, relu_inplace=relu_inplace),
+        'vgg11_bn': lambda: models.VGG('VGG11', num_classes, batch_norm=True, relu_inplace=relu_inplace),
+        'vgg13': lambda: models.VGG('VGG13', num_classes, batch_norm=False, relu_inplace=relu_inplace),
+        'vgg13_bn': lambda: models.VGG('VGG13', num_classes, batch_norm=True, relu_inplace=relu_inplace),
+        'vgg16': lambda: models.VGG('VGG16', num_classes, batch_norm=False, relu_inplace=relu_inplace),
+        'vgg16_bn': lambda: models.VGG('VGG16', num_classes, batch_norm=True, relu_inplace=relu_inplace),
+        'vgg19': lambda: models.VGG('VGG19', num_classes, batch_norm=False, relu_inplace=relu_inplace),
+        'vgg19_bn': lambda: models.VGG('VGG19', num_classes, batch_norm=True, relu_inplace=relu_inplace),
+        'resnet18': lambda: models.ResNet18(num_classes=num_classes),
         'resnet18_nobias': lambda: models.ResNet18(num_classes=num_classes, linear_bias=False),
-        'resnet18_nobias_nobn': lambda: models.ResNet18(num_classes=num_classes, use_batchnorm=False, linear_bias=False),
-        'resnet34':  lambda: models.ResNet34(num_classes=num_classes),
-        'resnet50':  lambda: models.ResNet50(num_classes=num_classes),
+        'resnet18_nobias_nobn': lambda: models.ResNet18(num_classes=num_classes, use_batchnorm=False,
+                                                        linear_bias=False),
+        'resnet18_nobias_nobn_lowlr': lambda: models.ResNet18(num_classes=num_classes, use_batchnorm=False,
+                                                              linear_bias=False),
+        'resnet18_nobias_nobn_highlr': lambda: models.ResNet18(num_classes=num_classes, use_batchnorm=False,
+                                                               linear_bias=False),
+        'resnet34': lambda: models.ResNet34(num_classes=num_classes),
+        'resnet50': lambda: models.ResNet50(num_classes=num_classes),
         'resnet101': lambda: models.ResNet101(num_classes=num_classes),
         'resnet152': lambda: models.ResNet152(num_classes=num_classes),
     }[config['model']]()
@@ -299,7 +310,6 @@ def get_model(config, device=-1, relu_inplace=True):
 
 
 def get_pretrained_model(config, path, device_id=-1, relu_inplace=True):
-
     model = get_model(config, device_id, relu_inplace=relu_inplace)
 
     if device_id != -1:
@@ -317,12 +327,14 @@ def get_pretrained_model(config, path, device_id=-1, relu_inplace=True):
             ),
         )
 
-    print("Loading model at path {} which had accuracy {} and at epoch {}".format(path, state['test_accuracy'], state['epoch']))
+    print("Loading model at path {} which had accuracy {} and at epoch {}".format(path, state['test_accuracy'],
+                                                                                  state['epoch']))
     model.load_state_dict(state['model_state_dict'])
-    return model, state['test_accuracy']*100
+    return model, state['test_accuracy'] * 100
 
-def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir, tensorboard_obj=None, nick='', start_acc=-1, retrain_seed=-1):
-    
+
+def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir, tensorboard_obj=None, nick='',
+                        start_acc=-1, retrain_seed=-1):
     # update the parameters
     config['num_epochs'] = args.retrain
     if nick == 'geometric':
@@ -343,9 +355,12 @@ def get_retrained_model(args, train_loader, test_loader, old_network, config, ou
         print('optimizer lr decay epochs is ', config['optimizer_decay_at_epochs'])
 
     # retrain
-    best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network, pretrained_dataset=(train_loader, test_loader), tensorboard_obj=tensorboard_obj)
+    best_acc = main(config, output_dir, args.gpu_id, pretrained_model=old_network,
+                    pretrained_dataset=(train_loader, test_loader), tensorboard_obj=tensorboard_obj)
     # currently I don' return the best model, as it checkpointed
     return None, best_acc
+
+
 def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
     """Store a checkpoint file to the output directory"""
     path = os.path.join(output_dir, filename)
@@ -355,7 +370,7 @@ def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
     if not os.path.isdir(directory):
         os.makedirs(directory, exist_ok=True)
 
-    time.sleep(1) # workaround for RuntimeError('Unknown Error -1') https://github.com/pytorch/pytorch/issues/10577
+    time.sleep(1)  # workaround for RuntimeError('Unknown Error -1') https://github.com/pytorch/pytorch/issues/10577
     torch.save({
         'epoch': epoch,
         'test_accuracy': test_accuracy,
