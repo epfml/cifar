@@ -10,9 +10,34 @@ import torchvision
 import models
 import cifar_utils.accumulators
 
+def test_model(model, testloader, gpu_id=0, use_cpu=False, nick =''):
+    def my_accuracy(predicted_logits, reference):
+        """Compute the ratio of correctly predicted labels"""
+        labels = torch.argmax(predicted_logits, 1)
+        correct_predictions = labels.eq(reference)
+        return correct_predictions.float().sum() / correct_predictions.nelement()
+
+    model.eval()
+    if use_cpu:
+        model.cpu()
+    mean_test_accuracy = cifar_utils.accumulators.Mean()
+    mean_test_loss = cifar_utils.accumulators.Mean()
+    # gpu_id = args.gpu_id
+    criterion = torch.nn.CrossEntropyLoss()
+    for batch_x, batch_y in testloader:
+        if not use_cpu:
+            batch_x, batch_y = batch_x.cuda(gpu_id), batch_y.cuda(gpu_id)
+        prediction = model(batch_x)
+        loss = criterion(prediction, batch_y)
+        acc = my_accuracy(prediction, batch_y)
+        mean_test_loss.add(loss.item(), weight=len(batch_x))
+        mean_test_accuracy.add(acc.item(), weight=len(batch_x))
+    print(f'accuracy of model in setting {nick} is ', mean_test_accuracy.value())
+    return mean_test_accuracy.value()
+
 
 def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=None, tensorboard_obj=None,
-         return_model=False):
+         return_model=False, global_test_loader=None):
     """
     Train a model
     You can either call this script directly (using the default parameters),
@@ -130,10 +155,10 @@ def main(config, output_dir, gpu_id, pretrained_model=None, pretrained_dataset=N
         # Store checkpoints for the best model so far
         is_best_so_far = best_accuracy_so_far.add(mean_test_accuracy.value())
         if is_best_so_far:
-            store_checkpoint(output_dir, "best.checkpoint", model, epoch, mean_test_accuracy.value())
+            store_checkpoint(output_dir, "best.checkpoint", model, epoch, mean_test_accuracy.value(), global_test_loader=global_test_loader)
 
     # Store a final checkpoint
-    store_checkpoint(output_dir, "final.checkpoint", model, config['num_epochs'] - 1, mean_test_accuracy.value())
+    store_checkpoint(output_dir, "final.checkpoint", model, config['num_epochs'] - 1, mean_test_accuracy.value(), global_test_loader=global_test_loader)
 
     # Return the optimal accuracy, could be used for learning rate tuning
     if return_model:
@@ -309,7 +334,7 @@ def get_model(config, device=-1, relu_inplace=True):
     return model
 
 
-def get_pretrained_model(config, path, device_id=-1, relu_inplace=True):
+def get_pretrained_model(config, path, device_id=-1, relu_inplace=True, return_local=True):
     model = get_model(config, device_id, relu_inplace=relu_inplace)
 
     if device_id != -1:
@@ -329,8 +354,18 @@ def get_pretrained_model(config, path, device_id=-1, relu_inplace=True):
 
     print("Loading model at path {} which had accuracy {} and at epoch {}".format(path, state['test_accuracy'],
                                                                                   state['epoch']))
+    if 'local_test_accuracy' in state:
+        print("Btw, the local test accuracy was {}".format(state['local_test_accuracy']))
+        local_acc = state['local_test_accuracy'] * 100
+    else:
+        local_acc = -1
+
     model.load_state_dict(state['model_state_dict'])
-    return model, state['test_accuracy'] * 100
+
+    if return_local:
+        return model, state['test_accuracy'] * 100, local_acc
+    else:
+        return model, state['test_accuracy'] * 100
 
 
 def get_retrained_model(args, train_loader, test_loader, old_network, config, output_dir, tensorboard_obj=None, nick='',
@@ -361,7 +396,7 @@ def get_retrained_model(args, train_loader, test_loader, old_network, config, ou
     return None, best_acc
 
 
-def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
+def store_checkpoint(output_dir, filename, model, epoch, test_accuracy, global_test_loader=None):
     """Store a checkpoint file to the output directory"""
     path = os.path.join(output_dir, filename)
 
@@ -371,12 +406,21 @@ def store_checkpoint(output_dir, filename, model, epoch, test_accuracy):
         os.makedirs(directory, exist_ok=True)
 
     time.sleep(1)  # workaround for RuntimeError('Unknown Error -1') https://github.com/pytorch/pytorch/issues/10577
-    torch.save({
-        'epoch': epoch,
-        'test_accuracy': test_accuracy,
-        'model_state_dict': model.state_dict(),
-    }, path)
-
+    if global_test_loader is None:
+        torch.save({
+            'epoch': epoch,
+            'test_accuracy': test_accuracy,
+            'model_state_dict': model.state_dict(),
+        }, path)
+    else:
+        gpu_id = next(model.named_parameters())[1].device.index
+        global_acc = test_model(model, global_test_loader, gpu_id=gpu_id)
+        torch.save({
+            'epoch': epoch,
+            'test_accuracy': global_acc,
+            'local_test_accuracy': test_accuracy,
+            'model_state_dict': model.state_dict(),
+        }, path)
 
 if __name__ == '__main__':
     config = dict(
