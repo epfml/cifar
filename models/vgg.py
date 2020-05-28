@@ -15,11 +15,13 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, num_classes=10, batch_norm=True, bias=True, relu_inplace=True):
+    def __init__(self, vgg_name, num_classes=10, batch_norm=True, bias=True, relu_inplace=True, cfg_key=None):
         super(VGG, self).__init__()
         self.batch_norm= batch_norm
         self.bias = bias
-        self.features = self._make_layers(cfg[vgg_name], relu_inplace=relu_inplace)
+        if cfg_key is None:
+            cfg_key = cfg[vgg_name]
+        self.features = self._make_layers(cfg_key, relu_inplace=relu_inplace)
         self.classifier = nn.Linear(512, num_classes, bias=self.bias)
         print("Relu Inplace is ", relu_inplace)
 

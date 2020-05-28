@@ -285,7 +285,7 @@ def get_optimizer(config, model_parameters):
     return optimizer, scheduler
 
 
-def get_model(config, device=-1, relu_inplace=True):
+def get_model(config, device=-1, relu_inplace=True, cfg_key=None):
     """
     :param device: instance of torch.device
     :return: An instance of torch.nn.Module
@@ -294,7 +294,7 @@ def get_model(config, device=-1, relu_inplace=True):
 
     model = {
         'vgg11_nobias': lambda: models.VGG('VGG11', num_classes, batch_norm=False, bias=False,
-                                           relu_inplace=relu_inplace),
+                                           relu_inplace=relu_inplace, cfg_key=cfg_key),
         'vgg11_half_nobias': lambda: models.VGG('VGG11_half', num_classes, batch_norm=False, bias=False,
                                                 relu_inplace=relu_inplace),
         'vgg11_doub_nobias': lambda: models.VGG('VGG11_doub', num_classes, batch_norm=False, bias=False,
@@ -334,7 +334,7 @@ def get_model(config, device=-1, relu_inplace=True):
     return model
 
 
-def get_pretrained_model(config, path, device_id=-1, relu_inplace=True, return_local=True):
+def get_pretrained_model(config, path, device_id=-1, relu_inplace=True, return_local=False):
     model = get_model(config, device_id, relu_inplace=relu_inplace)
 
     if device_id != -1:
