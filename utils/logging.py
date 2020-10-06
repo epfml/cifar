@@ -21,7 +21,7 @@ class JSONLogger:
         if not os.path.isdir(directory):
             os.makedirs(directory, exist_ok=True)
 
-    def log_metric(self, name, values, tags):
+    def log_metric(self, name, values, tags, print_stdout=True):
         """
         Store a scalar metric
 
@@ -34,8 +34,9 @@ class JSONLogger:
             **values,
             **tags,
         })
-        print("{name}: {values} ({tags})".format(
-            name=name, values=values, tags=tags))
+        if print_stdout:
+            print("{name}: {values} ({tags})".format(
+                name=name, values=values, tags=tags))
         if self.auto_save:
             self.save()
 
