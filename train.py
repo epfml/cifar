@@ -226,14 +226,10 @@ def get_model(device):
     num_classes = 100 if config['dataset'] == 'Cifar100' else 10
 
     model = {
-        'vgg11':     lambda: models.VGG('VGG11', num_classes, batch_norm=False),
-        'vgg11_bn':  lambda: models.VGG('VGG11', num_classes, batch_norm=True),
-        'vgg13':     lambda: models.VGG('VGG13', num_classes, batch_norm=False),
-        'vgg13_bn':  lambda: models.VGG('VGG13', num_classes, batch_norm=True),
-        'vgg16':     lambda: models.VGG('VGG16', num_classes, batch_norm=False),
-        'vgg16_bn':  lambda: models.VGG('VGG16', num_classes, batch_norm=True),
-        'vgg19':     lambda: models.VGG('VGG19', num_classes, batch_norm=False),
-        'vgg19_bn':  lambda: models.VGG('VGG19', num_classes, batch_norm=True),
+        'vgg11':     lambda: models.vgg11(),
+        'vgg13':     lambda: models.vgg13(),
+        'vgg16':     lambda: models.vgg16(),
+        'vgg19':     lambda: models.vgg19(),
         'resnet18':  lambda: models.ResNet18(num_classes=num_classes),
         'resnet34':  lambda: models.ResNet34(num_classes=num_classes),
         'resnet50':  lambda: models.ResNet50(num_classes=num_classes),
