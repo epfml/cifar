@@ -63,9 +63,6 @@ def main():
         mean_train_accuracy = utils.accumulators.Mean()
         mean_train_loss = utils.accumulators.Mean()
 
-        # Update the optimizer's learning rate
-        scheduler.step(epoch)
-
         for batch_x, batch_y in training_loader:
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
@@ -82,6 +79,9 @@ def main():
             # Store the statistics
             mean_train_loss.add(loss.item(), weight=len(batch_x))
             mean_train_accuracy.add(acc.item(), weight=len(batch_x))
+
+        # Update the optimizer's learning rate
+        scheduler.step(epoch)
 
         # Log training stats
         log_metric(
