@@ -79,7 +79,7 @@ def main():
             mean_train_accuracy.add(acc.item(), weight=len(batch_x))
 
         # Update the optimizer's learning rate
-        scheduler.step(epoch)
+        scheduler.step()
 
         # Log training stats
         log_metric(
