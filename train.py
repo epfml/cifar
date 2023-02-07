@@ -7,13 +7,12 @@ import numpy as np
 import torch
 import torchvision
 
-import models
 import utils.accumulators
 
 config = dict(
-    dataset='Cifar10',
-    model='resnet18',
-    optimizer='SGD',
+    dataset="Cifar10",
+    model="resnet18",
+    optimizer="SGD",
     optimizer_decay_at_epochs=[150, 250],
     optimizer_decay_with_factor=10.0,
     optimizer_learning_rate=0.1,
@@ -25,7 +24,7 @@ config = dict(
 )
 
 
-output_dir = './output.tmp' # Can be overwritten by a script calling this
+output_dir = "./output.tmp"  # Can be overwritten by a script calling this
 
 
 def main():
@@ -37,11 +36,11 @@ def main():
     """
 
     # Set the seed
-    torch.manual_seed(config['seed'])
-    np.random.seed(config['seed'])
+    torch.manual_seed(config["seed"])
+    np.random.seed(config["seed"])
 
     # We will run on CUDA if there is a GPU available
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Configure the dataset, model and the optimizer based on the global
     # `config` dictionary.
@@ -53,8 +52,8 @@ def main():
     # We keep track of the best accuracy so far to store checkpoints
     best_accuracy_so_far = utils.accumulators.Max()
 
-    for epoch in range(config['num_epochs']):
-        print('Epoch {:03d}'.format(epoch))
+    for epoch in range(config["num_epochs"]):
+        print("Epoch {:03d}".format(epoch))
 
         # Enable training mode (automatic differentiation + batch norm)
         model.train()
@@ -85,14 +84,14 @@ def main():
 
         # Log training stats
         log_metric(
-            'accuracy',
-            {'epoch': epoch, 'value': mean_train_accuracy.value()},
-            {'split': 'train'}
+            "accuracy",
+            {"epoch": epoch, "value": mean_train_accuracy.value()},
+            {"split": "train"},
         )
         log_metric(
-            'cross_entropy',
-            {'epoch': epoch, 'value': mean_train_loss.value()},
-            {'split': 'train'}
+            "cross_entropy",
+            {"epoch": epoch, "value": mean_train_loss.value()},
+            {"split": "train"},
         )
 
         # Evaluation
@@ -109,23 +108,17 @@ def main():
 
         # Log test stats
         log_metric(
-            'accuracy',
-            {'epoch': epoch, 'value': mean_test_accuracy.value()},
-            {'split': 'test'}
+            "accuracy",
+            {"epoch": epoch, "value": mean_test_accuracy.value()},
+            {"split": "test"},
         )
         log_metric(
-            'cross_entropy',
-            {'epoch': epoch, 'value': mean_test_loss.value()},
-            {'split': 'test'}
+            "cross_entropy",
+            {"epoch": epoch, "value": mean_test_loss.value()},
+            {"split": "test"},
         )
 
-        # Store checkpoints for the best model so far
-        is_best_so_far = best_accuracy_so_far.add(mean_test_accuracy.value())
-        if is_best_so_far:
-            store_checkpoint("best.checkpoint", model, epoch, mean_test_accuracy.value())
-
-    # Store a final checkpoint
-    store_checkpoint("final.checkpoint", model, config['num_epochs'] - 1, mean_test_accuracy.value())
+        best_accuracy_so_far.add(mean_test_accuracy.value())
 
     # Return the optimal accuracy, could be used for learning rate tuning
     return best_accuracy_so_far.value()
@@ -147,47 +140,59 @@ def log_metric(name, values, tags):
     print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
-def get_dataset(test_batch_size=100, shuffle_train=True, num_workers=2, data_root='./data'):
+def get_dataset(
+    test_batch_size=1000,
+    shuffle_train=True,
+    num_workers=2,
+    data_root=os.getenv("DATA_DIR", "./data"),
+):
     """
     Create dataset loaders for the chosen dataset
     :return: Tuple (training_loader, test_loader)
     """
-    if config['dataset'] == 'Cifar10':
+    if config["dataset"] == "Cifar10":
         dataset = torchvision.datasets.CIFAR10
-    elif config['dataset'] == 'Cifar100':
+    elif config["dataset"] == "Cifar100":
         dataset = torchvision.datasets.CIFAR100
     else:
-        raise ValueError('Unexpected value for config[dataset] {}'.format(config['dataset']))
+        raise ValueError(
+            "Unexpected value for config[dataset] {}".format(config["dataset"])
+        )
 
     data_mean = (0.4914, 0.4822, 0.4465)
     data_stddev = (0.2023, 0.1994, 0.2010)
 
-    transform_train = torchvision.transforms.Compose([
-        torchvision.transforms.RandomCrop(32, padding=4),
-        torchvision.transforms.RandomHorizontalFlip(),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(data_mean, data_stddev),
-    ])
+    transform_train = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.RandomCrop(32, padding=4),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(data_mean, data_stddev),
+        ]
+    )
 
-    transform_test = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(data_mean, data_stddev),
-    ])
+    transform_test = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(data_mean, data_stddev),
+        ]
+    )
 
-    training_set = dataset(root=data_root, train=True, download=True, transform=transform_train)
-    test_set = dataset(root=data_root, train=False, download=True, transform=transform_test)
+    training_set = dataset(
+        root=data_root, train=True, download=True, transform=transform_train
+    )
+    test_set = dataset(
+        root=data_root, train=False, download=True, transform=transform_test
+    )
 
     training_loader = torch.utils.data.DataLoader(
         training_set,
-        batch_size=config['batch_size'],
+        batch_size=config["batch_size"],
         shuffle=shuffle_train,
-        num_workers=num_workers
+        num_workers=num_workers,
     )
     test_loader = torch.utils.data.DataLoader(
-        test_set,
-        batch_size=test_batch_size,
-        shuffle=False,
-        num_workers=num_workers
+        test_set, batch_size=test_batch_size, shuffle=False, num_workers=num_workers
     )
 
     return training_loader, test_loader
@@ -199,20 +204,20 @@ def get_optimizer(model_parameters):
     :param model_parameters: a list of parameters to be trained
     :return: Tuple (optimizer, scheduler)
     """
-    if config['optimizer'] == 'SGD':
+    if config["optimizer"] == "SGD":
         optimizer = torch.optim.SGD(
             model_parameters,
-            lr=config['optimizer_learning_rate'],
-            momentum=config['optimizer_momentum'],
-            weight_decay=config['optimizer_weight_decay'],
+            lr=config["optimizer_learning_rate"],
+            momentum=config["optimizer_momentum"],
+            weight_decay=config["optimizer_weight_decay"],
         )
     else:
-        raise ValueError('Unexpected value for optimizer')
+        raise ValueError("Unexpected value for optimizer")
 
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=config['optimizer_decay_at_epochs'],
-        gamma=1.0/config['optimizer_decay_with_factor'],
+        milestones=config["optimizer_decay_at_epochs"],
+        gamma=1.0 / config["optimizer_decay_with_factor"],
     )
 
     return optimizer, scheduler
@@ -223,44 +228,23 @@ def get_model(device):
     :param device: instance of torch.device
     :return: An instance of torch.nn.Module
     """
-    num_classes = 100 if config['dataset'] == 'Cifar100' else 10
+    num_classes = 100 if config["dataset"] == "Cifar100" else 10
 
     model = {
-        'vgg11':     lambda: models.vgg11(),
-        'vgg13':     lambda: models.vgg13(),
-        'vgg16':     lambda: models.vgg16(),
-        'vgg19':     lambda: models.vgg19(),
-        'resnet18':  lambda: models.ResNet18(num_classes=num_classes),
-        'resnet34':  lambda: models.ResNet34(num_classes=num_classes),
-        'resnet50':  lambda: models.ResNet50(num_classes=num_classes),
-        'resnet101': lambda: models.ResNet101(num_classes=num_classes),
-        'resnet152': lambda: models.ResNet152(num_classes=num_classes),
-    }[config['model']]()
+        "vgg11": lambda: torchvision.models.vgg11(num_classes=num_classes),
+        "vgg11_bn": lambda: torchvision.models.vgg11_bn(num_classes=num_classes),
+        "resnet18": lambda: torchvision.models.resnet18(num_classes=num_classes),
+        "resnet50": lambda: torchvision.models.resnet50(num_classes=num_classes),
+        "resnet101": lambda: torchvision.models.resnet101(num_classes=num_classes),
+    }[config["model"]]()
 
     model.to(device)
-    if device == 'cuda':
+    if device == "cuda":
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
 
     return model
 
 
-def store_checkpoint(filename, model, epoch, test_accuracy):
-    """Store a checkpoint file to the output directory"""
-    path = os.path.join(output_dir, filename)
-
-    # Ensure the output directory exists
-    directory = os.path.dirname(path)
-    if not os.path.isdir(directory):
-        os.makedirs(directory, exist_ok=True)
-
-    time.sleep(1) # workaround for RuntimeError('Unknown Error -1') https://github.com/pytorch/pytorch/issues/10577
-    torch.save({
-        'epoch': epoch,
-        'test_accuracy': test_accuracy,
-        'model_state_dict': model.state_dict(),
-    }, path)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
