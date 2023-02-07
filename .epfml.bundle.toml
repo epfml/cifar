@@ -1,0 +1,20 @@
+# Generated with `epfml bundle init`
+exclude = [
+    "__pycache__",
+    "._*",
+    ".AppleDouble",
+    ".git",
+    ".github",
+    ".gitignore",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".pylintrc",
+    ".vscode",
+    "*.egg-info",
+    "*.exr",
+    "*.pyc",
+    "core",
+    "data",
+]
+include = []
+max_file_size = 100000

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+import json
 import os
 
 import numpy as np
 import torch
 import torchvision
+import wandb
 
 import utils.accumulators
 
@@ -22,8 +24,15 @@ config = dict(
     seed=42,
 )
 
+CHECKPOINT_FILE = "checkpoint.pt"
 
-output_dir = "./output.tmp"  # Can be overwritten by a script calling this
+# Override config values from environment variables:
+for key, default_value in config.items():
+    if os.getenv(key) is not None:
+        if not isinstance(default_value, str):
+            config[key] = json.loads(os.getenv(key, ""))
+        else:
+            config[key] = os.getenv(key, "")
 
 
 def main():
@@ -33,6 +42,8 @@ def main():
     or import it as a module, override config and run main()
     :return: scalar of the best accuracy
     """
+
+    wandb.init(config=config, resume="allow")
 
     # Set the seed
     torch.manual_seed(config["seed"])
@@ -51,7 +62,19 @@ def main():
     # We keep track of the best accuracy so far to store checkpoints
     best_accuracy_so_far = utils.accumulators.Max()
 
-    for epoch in range(config["num_epochs"]):
+    start_epoch = 0
+
+    # If the run was resumed, load the latest checkpoint.
+    if wandb.run is not None and wandb.run.resumed:
+        wandb.restore(CHECKPOINT_FILE)
+        checkpoint = torch.load(CHECKPOINT_FILE)
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        scheduler.load_state_dict(checkpoint["scheduler"])
+        start_epoch = checkpoint["epoch"]
+        best_accuracy_so_far.add(checkpoint["best_accuracy_so_far"])
+
+    for epoch in range(start_epoch, config["num_epochs"]):
         print("Epoch {:03d}".format(epoch))
 
         # Enable training mode (automatic differentiation + batch norm)
@@ -82,16 +105,10 @@ def main():
         scheduler.step()
 
         # Log training stats
-        log_metric(
-            "accuracy",
-            {"epoch": epoch, "value": mean_train_accuracy.value()},
-            {"split": "train"},
-        )
-        log_metric(
-            "cross_entropy",
-            {"epoch": epoch, "value": mean_train_loss.value()},
-            {"split": "train"},
-        )
+        wandb.log({
+            "train/accuracy": mean_train_accuracy.value(),
+            "train/loss": mean_train_loss.value(),
+        }, step=epoch + 1)
 
         # Evaluation
         model.eval()
@@ -106,18 +123,23 @@ def main():
             mean_test_accuracy.add(acc.item(), weight=len(batch_x))
 
         # Log test stats
-        log_metric(
-            "accuracy",
-            {"epoch": epoch, "value": mean_test_accuracy.value()},
-            {"split": "test"},
-        )
-        log_metric(
-            "cross_entropy",
-            {"epoch": epoch, "value": mean_test_loss.value()},
-            {"split": "test"},
-        )
+        wandb.log({
+            "test/accuracy": mean_test_accuracy.value(),
+            "test/loss": mean_test_loss.value(),
+        }, step=epoch + 1)
 
         best_accuracy_so_far.add(mean_test_accuracy.value())
+        wandb.summary["best_accuracy"] = best_accuracy_so_far.value()
+
+        # Save a checkpoint. If we get preempted, we can resume from there.
+        torch.save({
+            "epoch": epoch + 1,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "best_accuracy_so_far": best_accuracy_so_far.value(),
+        }, CHECKPOINT_FILE)
+        wandb.save(CHECKPOINT_FILE)
 
     # Return the optimal accuracy, could be used for learning rate tuning
     return best_accuracy_so_far.value()
@@ -128,15 +150,6 @@ def accuracy(predicted_logits, reference):
     labels = torch.argmax(predicted_logits, 1)
     correct_predictions = labels.eq(reference)
     return correct_predictions.sum().float() / correct_predictions.nelement()
-
-
-def log_metric(name, values, tags):
-    """
-    Log timeseries data.
-    Placeholder implementation.
-    This function should be overwritten by any script that runs this as a module.
-    """
-    print("{name}: {values} ({tags})".format(name=name, values=values, tags=tags))
 
 
 def get_dataset(
