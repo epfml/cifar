@@ -82,5 +82,5 @@ Miscelaneous utilities. At the time of writing these docs, this contains accumul
 | VGG 11    | Cifar 10 | 300    | 1x Nvidia Tesla V100 | 1:06 |
 
 
-## job-monitor
-This setup is compatible with the work-in-progress [epfml/job-monitor](https://github.com/epfml/job-monitor).
+## IC Cluster
+To schedule jobs on the IC Cluster, you should be able to run something like `./schedule.sh`, after checking its contents and modifying it for your needs.
