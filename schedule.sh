@@ -26,9 +26,8 @@ do
         --environment EPFML_STORE_S3_ACCESS_KEY=$EPFML_STORE_S3_ACCESS_KEY \
         --environment EPFML_STORE_S3_SECRET_KEY=$EPFML_STORE_S3_SECRET_KEY \
         --environment EPFML_STORE_S3_BUCKET=$EPFML_STORE_S3_BUCKET \
-        --pvc runai-$LAB-$USER-$LABdata1:/$LABdata1 \
-        --pvc runai-$LAB-$USER-$LABraw1:/$LABraw1 \
-        --pvc runai-$LAB-$USER-scratch:/scrach \
+        --pvc runai-$LAB-$USER-${LAB}data1:/${LAB}data1 \
+        --pvc runai-$LAB-$USER-${LAB}raw1:/${LAB}raw1 \
         --command -- \
             /entrypoint.sh \
             su $USER -c \
