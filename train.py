@@ -30,7 +30,11 @@ CHECKPOINT_FILE = "checkpoint.pt"
 for key, default_value in config.items():
     if os.getenv(key) is not None:
         if not isinstance(default_value, str):
-            config[key] = json.loads(os.getenv(key, ""))
+            try:
+                config[key] = json.loads(os.getenv(key, ""))
+            except json.decoder.JSONDecodeError:
+                print(f"Failed to decode environment variable {key} with value {os.getenv(key)}}.")
+                exit(1)
         else:
             config[key] = os.getenv(key, "")
 
