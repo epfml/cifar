@@ -23,9 +23,9 @@ do
         --host-ipc \
         --environment DATA_DIR=/${LAB}raw1/$USER/data \
         --environment EPFML_LDAP=$USER \
-        --environment EPFML_STORE_S3_ACCESS_KEY=$EPFML_STORE_S3_ACCESS_KEY \
-        --environment EPFML_STORE_S3_SECRET_KEY=$EPFML_STORE_S3_SECRET_KEY \
-        --environment EPFML_STORE_S3_BUCKET=$EPFML_STORE_S3_BUCKET \
+        --environment EPFML_STORE_S3_ACCESS_KEY="$EPFML_STORE_S3_ACCESS_KEY" \
+        --environment EPFML_STORE_S3_SECRET_KEY="$EPFML_STORE_S3_SECRET_KEY" \
+        --environment EPFML_STORE_S3_BUCKET="$EPFML_STORE_S3_BUCKET" \
         --pvc runai-$LAB-$USER-${LAB}data1:/${LAB}data1 \
         --pvc runai-$LAB-$USER-${LAB}raw1:/${LAB}raw1 \
         --command -- \
